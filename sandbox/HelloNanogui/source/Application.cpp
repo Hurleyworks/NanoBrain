@@ -18,7 +18,7 @@ class Application : public Jahley::App
     {
         // get the resource folder for this project
         std::string resourceFolder = getResourcePath (APP_NAME);
-       
+
         LOG (DBUG) << resourceFolder;
 
         std::string rootFolder = getRepositoryPath (APP_NAME);
@@ -71,8 +71,14 @@ Jahley::App* Jahley::CreateApplication()
     DesktopWindowSettings settings{};
     settings.name = APP_NAME;
 
+    // get the resource folder for this project
+    std::string resourceFolder = getResourcePath (APP_NAME);
+
+    // the icon folder 
+    std::string iconFolder = resourceFolder + std::string ("/icons");
+
     // Create a View instance using the 'settings' object and store it in a nanogui::ref pointer named 'screen'
-    nanogui::ref<nanogui::Screen> screen = new View (settings);
+    nanogui::ref<nanogui::Screen> screen = new View (settings, iconFolder);
     screen->set_visible (true); // Set the 'visible' property of the 'screen' instance to true
 
     // Create an instance of the Application class using the 'settings' object and return it

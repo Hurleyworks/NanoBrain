@@ -49,7 +49,7 @@ constexpr float Pi = 3.14159f;
 class View : public nanogui::Screen
 {
  public:
-    View (const DesktopWindowSettings& settings) :
+    View (const DesktopWindowSettings& settings, const std::string& iconFolder) :
         nanogui::Screen (Vector2i (settings.width, settings.height), settings.name, settings.resizable)
     {
         using namespace nanogui;
@@ -147,13 +147,13 @@ class View : public nanogui::Screen
 
         /// Executable is in the Debug/Release/.. subdirectory
        
-        std::string icon_folder("../../../../CommonContent/nanogui_icons");
+       // std::string icon_folder("../../../../CommonContent/nanogui_icons");
 
         std::vector<std::pair<int, std::string>> icons;
 
         try
         {
-            icons = load_image_directory (m_nvg_context, icon_folder);
+            icons = load_image_directory (m_nvg_context, iconFolder);
         }
         catch (const std::exception& e)
         {
