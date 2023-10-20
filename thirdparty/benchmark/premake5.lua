@@ -38,7 +38,7 @@ end
         disablewarnings { "4244", "4267", "4996", "4305", "4018", "4334", "4312", "4311", "4251", "4275"}
 		defines { "_CRT_SECURE_NO_WARNINGS", "BENCHMARK_OS_WINDOWS"}
 		characterset "MBCS"
-		buildoptions { "/Zm250", "/bigobj",}
+		buildoptions { "/Zm250", "/bigobj","/Zc:__cplusplus",}
 
     filter "configurations:Debug"
         symbols "On"

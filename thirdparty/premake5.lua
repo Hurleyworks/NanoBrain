@@ -26,3 +26,7 @@ end
 
 -- add projects
 include "benchmark"
+include "g3log"
+include "optiXUtil"
+include "glfw"
+include "nanogui"
