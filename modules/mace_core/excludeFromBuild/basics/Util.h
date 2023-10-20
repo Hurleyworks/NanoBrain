@@ -22,7 +22,6 @@ const LEVELS CRITICAL{WARNING.value + 1, "CRTICAL"};
 #undef RGB
 #endif
 
-
 // https://stackoverflow.com/questions/6942273/how-to-get-a-random-element-from-a-c-container
 //  https://gist.github.com/cbsmith/5538174
 template <typename RandomGenerator = std::default_random_engine>
@@ -184,7 +183,6 @@ inline double generateRandomDouble()
     return distr (generator);
 }
 
-
 inline std::filesystem::path changeFileExtensionToJpeg (const std::filesystem::path& pngPath)
 {
     std::filesystem::path newPath = pngPath;
@@ -222,4 +220,3 @@ inline std::vector<char> readBinaryFile (const std::filesystem::path& filepath)
 
     return std::move (ret);
 }
-

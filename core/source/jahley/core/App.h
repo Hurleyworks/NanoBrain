@@ -52,8 +52,6 @@ namespace Jahley
         std::chrono::time_point<std::chrono::system_clock> startTime = std::chrono::system_clock::now();
 
     private:
-        // Private members can only be accessed within the class itself.
-
         // Boolean value indicating whether the application is windowed or not.
         bool windowApp = false;
 

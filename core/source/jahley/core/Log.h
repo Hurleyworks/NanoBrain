@@ -6,7 +6,6 @@
 
 #include "../AppConfig.h"
 
-// ChatGPT says
 // This C++ class LogHandler takes two callback functions as arguments in its constructor :
 
 // FatalErrorCallback is a type alias for a std::function that takes a g3::FatalMessagePtr object as a parameter and returns void.
