@@ -136,4 +136,4 @@ project "Core"
 	-- add projects here
 	include "sandbox/HelloWorld"
 	include "sandbox/HelloNanogui"
-  
+    include "sandbox/HelloOIIO"
