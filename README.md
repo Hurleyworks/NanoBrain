@@ -2,7 +2,7 @@
 Famework for experimenting with OptiX 8,0 using OptixUtility from shocker
 https://github.com/shocker-0x15/OptiX_Utility
 
-#requires
+# Requires
 Cuda 12.3
 OptiX 8.0
 and assumes that they have been installed in the default locations
