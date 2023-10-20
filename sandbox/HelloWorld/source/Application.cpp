@@ -2,36 +2,41 @@
 
 const std::string APP_NAME = "HelloWorld";
 
-
 class Application : public Jahley::App
 {
-public:
-	Application() :
-		Jahley::App()
-	{
-		try
-		{
-			LOG(DBUG) << "Hello World!";
+ public:
+    Application() :
+        Jahley::App()
+    {
+        try
+        {
+            // get the resource folder for this project
+            std::string resourceFolder = getResourcePath (APP_NAME);
+            LOG (DBUG) << resourceFolder;
 
-		}
-		catch (std::exception& e)
-		{
-			std::cout << e.what() << std::endl;
-		}
-	}
+            std::string rootFolder = getRepositoryPath (APP_NAME);
+            LOG (DBUG) << rootFolder;
 
-	~Application()
-	{
-	}
+            LOG (DBUG) << "Hello World!";
+        }
+        catch (std::exception& e)
+        {
+            std::cout << e.what() << std::endl;
+        }
+    }
 
-	void onCrash() override
-	{
-	}
+    ~Application()
+    {
+    }
 
-private:
+    void onCrash() override
+    {
+    }
+
+ private:
 };
 
 Jahley::App* Jahley::CreateApplication()
 {
-	return new Application();
+    return new Application();
 }

@@ -1,7 +1,7 @@
 
 extern Jahley::App* Jahley::CreateApplication();
 
-// ChatGPT says
+
 // This C++ code defines a function main which is the entry point of the program.The function takes two parameters
 // : argc, an integer representing the number of command - line arguments passed to the program, and argv, 
 // an array of strings representing those arguments.
