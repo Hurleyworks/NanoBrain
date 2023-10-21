@@ -4,3 +4,5 @@
 
 /thirdparty/builds
 /builds
+/benchmark/builds/VisualStudio2022
+/unittest/builds/VisualStudio2022
