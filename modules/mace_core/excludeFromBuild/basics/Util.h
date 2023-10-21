@@ -220,3 +220,45 @@ inline std::vector<char> readBinaryFile (const std::filesystem::path& filepath)
 
     return std::move (ret);
 }
+
+namespace mace
+{
+
+    inline bool atomicCompareAndExchange (volatile uint32_t* v, uint32_t newValue, uint32_t oldValue)
+    {
+#if defined(_WIN32)
+        return _InterlockedCompareExchange (
+                   reinterpret_cast<volatile long*> (v), (long)newValue, (long)oldValue) == (long)oldValue;
+#else
+        return __sync_bool_compare_and_swap (v, oldValue, newValue);
+#endif
+    }
+
+    inline uint32_t atomicAdd (volatile uint32_t* dst, uint32_t delta)
+    {
+#if defined(_MSC_VER)
+        return _InterlockedExchangeAdd (reinterpret_cast<volatile long*> (dst), delta) + delta;
+#else
+        return __sync_add_and_fetch (dst, delta);
+#endif
+    }
+
+    inline float atomicAdd (volatile float* dst, float delta)
+    {
+        union bits
+        {
+            float f;
+            uint32_t i;
+        };
+        bits oldVal, newVal;
+        do
+        {
+#if defined(__i386__) || defined(__amd64__)
+            __asm__ __volatile__ ("pause\n");
+#endif
+            oldVal.f = *dst;
+            newVal.f = oldVal.f + delta;
+        } while (!atomicCompareAndExchange ((volatile uint32_t*)dst, newVal.i, oldVal.i));
+        return newVal.f;
+    }
+} // namespace mace
