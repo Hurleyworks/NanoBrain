@@ -45,7 +45,6 @@ local ROOT = "../"
 		THIRD_PARTY_DIR .. "nanogui/ext/nanovg/src",
 		THIRD_PARTY_DIR .. "optiXUtil/src",
 		THIRD_PARTY_DIR .. "stb_image",
-		THIRD_PARTY_DIR .. "nanothread/include",
 	}
 	
 	targetdir (ROOT .. "builds/bin/" .. outputdir .. "/%{prj.name}")
@@ -83,7 +82,6 @@ local ROOT = "../"
 			"opengl32",
 			"optiXUtil",
 			"stb_image", -- for nanogui
-			"nanothread",
 			"rapidobj",
 			
 			--cuda
@@ -136,7 +134,6 @@ local ROOT = "../"
 			"opengl32",
 			"optiXUtil",
 			"stb_image", -- for nanogui
-			"nanothread",
 			"rapidobj",
 			
 			--cuda
