@@ -41,7 +41,6 @@ using ItemID = int64_t;
 #define COROUTINE_NAMESPACE std
 #endif
 
-
 // eigen math
 #include <linalg/eigen34/Eigen/Dense>
 
@@ -65,7 +64,6 @@ using VectorXu = Eigen::Matrix<uint32_t, Eigen::Dynamic, 1>;
 using VectorXb = Eigen::Matrix<bool, Eigen::Dynamic, 1>;
 using MatrixXi = Eigen::Matrix<int32_t, Eigen::Dynamic, Eigen::Dynamic>;
 
-
 // openimageio
 #include <OpenImageIO/thread.h>
 #include <OpenImageIO/unordered_map_concurrent.h>
@@ -74,11 +72,14 @@ using MatrixXi = Eigen::Matrix<int32_t, Eigen::Dynamic, Eigen::Dynamic>;
 #include <OpenImageIO/imageio.h>
 #include <OpenImageIO/imagecache.h>
 
-
 // g3log
 #include <g3log/g3log.hpp>
 #include <g3log/logworker.hpp>
 
+// nano signal and slots
+#include <nano_signal/nano_signal_slot.hpp>
+#include <nano_signal/nano_mutex.hpp>
+using Observer = Nano::Observer<>;
 
 // json
 #include <json/json.hpp>
@@ -94,5 +95,6 @@ using nlohmann::json;
 namespace mace
 {
 	#include "excludeFromBuild/basics/StringUtil.h"
+	#include "excludeFromBuild/basics/InputEvent.h"
 
 } // namespace mace

@@ -47,6 +47,7 @@ local ROOT = "../"
 		THIRD_PARTY_DIR .. "stb_image",
 		THIRD_PARTY_DIR .. "newtondynamics/sdk/**",
 		THIRD_PARTY_DIR .. "newtondynamics/**",
+		THIRD_PARTY_DIR .. "date/include/date",
 	}
 	
 	targetdir (ROOT .. "builds/bin/" .. outputdir .. "/%{prj.name}")
