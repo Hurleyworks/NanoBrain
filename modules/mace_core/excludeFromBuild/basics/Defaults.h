@@ -9,6 +9,7 @@ constexpr uint32_t DEFAULT_GUI_FOOTER_HEIGHT = 40; // pixels
 constexpr float PHI = 1.618f;
 constexpr float DEFAULT_DESKTOP_WINDOW_HEIGHT = 800.0f + DEFAULT_GUI_HEADER_HEIGHT + DEFAULT_GUI_FOOTER_HEIGHT;
 constexpr float DEFAULT_DESKTOP_WINDOW_WIDTH = DEFAULT_DESKTOP_WINDOW_HEIGHT * PHI;
+constexpr int DEFAULT_MIN_WINDOW = 10;
 
 // std::string is not a literal type, so it can't be used with constexpr.
 // constexpr requires the variable to be initialized with a constant expression,
@@ -44,3 +45,9 @@ struct DesktopWindowSettings
 #define MOUSE_RELEASE 0
 #define MOUSE_PRESS 1
 #define MOUSE_REPEAT 2
+
+using ItemID = int64_t;
+using BodyID = int64_t;
+using PolyID = int64_t;
+constexpr int64_t INVALID_ID = -1;
+constexpr int64_t INVALID_INDEX = -1;
