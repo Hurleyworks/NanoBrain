@@ -4,7 +4,7 @@ local ROOT = "../"
 	language "C++"
 
 	defines{
-	 "OIIO_STATIC_DEFINE", "__TBB_NO_IMPLICIT_LINKAGE", "_USE_MATH_DEFINES"
+	 "OIIO_STATIC_DEFINE", "_USE_MATH_DEFINES"
 	}
 	flags { "MultiProcessorCompile", "NoMinimalRebuild" }
 	
@@ -45,6 +45,8 @@ local ROOT = "../"
 		THIRD_PARTY_DIR .. "nanogui/ext/nanovg/src",
 		THIRD_PARTY_DIR .. "optiXUtil/src",
 		THIRD_PARTY_DIR .. "stb_image",
+		THIRD_PARTY_DIR .. "newtondynamics/sdk/**",
+		THIRD_PARTY_DIR .. "newtondynamics/**",
 	}
 	
 	targetdir (ROOT .. "builds/bin/" .. outputdir .. "/%{prj.name}")
@@ -83,6 +85,7 @@ local ROOT = "../"
 			"optiXUtil",
 			"stb_image", -- for nanogui
 			"rapidobj",
+			"newtondynamics",
 			
 			--cuda
 			"cudart_static",
@@ -135,6 +138,7 @@ local ROOT = "../"
 			"optiXUtil",
 			"stb_image", -- for nanogui
 			"rapidobj",
+			"newtondynamics",
 			
 			--cuda
 			"cudart_static",
