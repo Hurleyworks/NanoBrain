@@ -42,7 +42,6 @@
 // eigen math
 #include <linalg/eigen34/Eigen/Dense>
 
-
 // openimageio
 #include <OpenImageIO/thread.h>
 #include <OpenImageIO/unordered_map_concurrent.h>
@@ -54,6 +53,9 @@
 // g3log
 #include <g3log/g3log.hpp>
 #include <g3log/logworker.hpp>
+
+// moody camel lock free queue
+#include <concurrent/concurrentqueue.h>
 
 // nano signal and slots
 #include <nano_signal/nano_signal_slot.hpp>
@@ -73,7 +75,11 @@ using nlohmann::json;
 
 namespace mace
 {
-	#include "excludeFromBuild/basics/StringUtil.h"
-	#include "excludeFromBuild/basics/InputEvent.h"
+// basics
+#include "excludeFromBuild/basics/StringUtil.h"
+#include "excludeFromBuild/basics/InputEvent.h"
+
+// imaging
+#include "excludeFromBuild/imaging/CacheHandler.h"
 
 } // namespace mace

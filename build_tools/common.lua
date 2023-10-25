@@ -48,6 +48,7 @@ local ROOT = "../"
 		THIRD_PARTY_DIR .. "newtondynamics/sdk/**",
 		THIRD_PARTY_DIR .. "newtondynamics/**",
 		THIRD_PARTY_DIR .. "date/include/date",
+		THIRD_PARTY_DIR .. "reproc++",
 	}
 	
 	targetdir (ROOT .. "builds/bin/" .. outputdir .. "/%{prj.name}")
@@ -87,6 +88,8 @@ local ROOT = "../"
 			"stb_image", -- for nanogui
 			"rapidobj",
 			"newtondynamics",
+			"reproc++",
+			"Ws2_32",
 			
 			--cuda
 			"cudart_static",
@@ -140,6 +143,8 @@ local ROOT = "../"
 			"stb_image", -- for nanogui
 			"rapidobj",
 			"newtondynamics",
+			"reproc++",
+			"Ws2_32",
 			
 			--cuda
 			"cudart_static",

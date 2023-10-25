@@ -30,7 +30,7 @@ namespace Jahley
         virtual void update() {}
         virtual void onInit() {}
         virtual void onCrash() {}
-        
+        virtual void onInputEvent (const mace::InputEvent& e) {}
         virtual void onWindowResize(uint32_t width, uint32_t height) {}
 
         // Methods for handling crashes that occur during the application's execution.

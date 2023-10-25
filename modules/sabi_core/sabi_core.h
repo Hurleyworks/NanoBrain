@@ -2,6 +2,8 @@
 
 #include "../wabi_core/wabi_core.h"
 
+#include <rapidobj/rapidobj.hpp>
+
 constexpr float DEFAULT_ZOOM_FACTOR = 0.5f;
 constexpr float DEFAULT_ZOOM_MULTIPLIER = 200.0f;
 
@@ -13,10 +15,6 @@ constexpr float DEFAULT_NEAR_PLANE = 0.01f;
 constexpr float DEFAULT_FAR_PLANE = 1000.0f;
 constexpr float DEFAULT_FOCAL_LENGTH = 1.0f;
 constexpr float DEFAULT_APETURE = 0.0f;
-
-
-
-
 
 namespace sabi
 {

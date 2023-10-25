@@ -221,9 +221,135 @@ inline std::vector<char> readBinaryFile (const std::filesystem::path& filepath)
     return std::move (ret);
 }
 
+struct FileServices
+{
+    static void copyFiles (const std::string& searchFolder, const std::string& destFolder, const std::string& extension, bool recursive = true)
+    {
+        std::filesystem::recursive_directory_iterator dirIt (searchFolder), end;
+        while (dirIt != end)
+        {
+            if (dirIt->path().extension() == extension || extension == "*")
+            {
+                std::filesystem::copy (dirIt->path(), destFolder + "/" + dirIt->path().filename().string());
+            }
+            ++dirIt;
+        }
+    }
+
+    static void moveFiles (const std::string& searchFolder, const std::string& destFolder, const std::string& extension)
+    {
+        for (const auto& entry : std::filesystem::directory_iterator (searchFolder))
+        {
+            if (entry.path().extension() == extension || extension == "*")
+            {
+                std::filesystem::rename (entry, destFolder + "/" + entry.path().filename().string());
+            }
+        }
+    }
+
+    static std::vector<std::filesystem::path> findFilesWithExtension (const std::filesystem::path& searchFolder, const std::string extension)
+    {
+        std::vector<std::filesystem::path> matchingFiles;
+
+        for (auto const& dir_entry : std::filesystem::directory_iterator{searchFolder})
+        {
+            if (dir_entry.path().extension().string() == extension)
+            {
+                matchingFiles.push_back (dir_entry.path());
+            }
+        }
+
+        return matchingFiles;
+    }
+
+    static std::vector<std::string> getFiles (const std::filesystem::path& searchFolder, const std::string& extension, bool recursive)
+    {
+        std::vector<std::string> files;
+        if (recursive)
+        {
+            for (const auto& entry : std::filesystem::recursive_directory_iterator (searchFolder))
+            {
+                if (entry.path().extension() == extension || extension == ".*")
+                {
+                    files.push_back (entry.path().string());
+                }
+            }
+        }
+        else
+        {
+            for (const auto& entry : std::filesystem::directory_iterator (searchFolder))
+            {
+                if (entry.path().extension() == extension || extension == ".*")
+                {
+                    files.push_back (entry.path().string());
+                }
+            }
+        }
+        return files;
+    }
+
+    static std::vector<std::string> getFolders (const std::string& searchFolder, bool recursive = true)
+    {
+        std::vector<std::string> folders;
+        std::filesystem::recursive_directory_iterator dirIt (searchFolder), end;
+        while (dirIt != end)
+        {
+            if (std::filesystem::is_directory (dirIt->status()))
+            {
+                folders.push_back (dirIt->path().string());
+            }
+            ++dirIt;
+        }
+        return folders;
+    }
+
+    static std::vector<std::string> getTextFileLines (const std::string& filePath)
+    {
+        std::vector<std::string> lines;
+        std::ifstream file (filePath);
+        if (!file)
+            return lines;
+
+        std::string line;
+        while (getline (file, line))
+        {
+            lines.push_back (line);
+        }
+        return lines;
+    }
+
+    static std::string findFilePath (const std::string& searchFolder, const std::string& fileName)
+    {
+        std::filesystem::recursive_directory_iterator dirIt (searchFolder), end;
+        while (dirIt != end)
+        {
+            if (dirIt->path().filename() == fileName)
+            {
+                return dirIt->path().string();
+            }
+            ++dirIt;
+        }
+        return "";
+    }
+
+    static std::optional<std::filesystem::path> findFileInFolder (
+        const std::filesystem::path& folder,
+        const std::string& filename)
+    {
+        for (const auto& entry : std::filesystem::recursive_directory_iterator (folder))
+        {
+            if (entry.path().filename() == filename)
+            {
+                return entry.path();
+            }
+        }
+        return std::nullopt;
+    }
+};
+
 namespace mace
 {
-
+    // I think this is from InstantMeshes
     inline bool atomicCompareAndExchange (volatile uint32_t* v, uint32_t newValue, uint32_t oldValue)
     {
 #if defined(_WIN32)

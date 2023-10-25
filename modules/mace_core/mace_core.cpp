@@ -5,7 +5,6 @@ ItemID HasId::sId = 0;
 
 namespace mace
 {
-
-	
+	#include "excludeFromBuild/imaging/CacheHandler.cpp"
 
 } // namespace mace
