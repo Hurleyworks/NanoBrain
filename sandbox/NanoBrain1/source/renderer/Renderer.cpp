@@ -106,6 +106,7 @@ void Renderer::render()
     {
         // get OptixTraversableHandle
         plp.travHandle = ctx->handlers->scene->getHandle();
+        plp.envLightPowerCoeff = std::pow (10.0f, log10EnvLightPowerCoeff);
 
         if (restartRender)
         {
