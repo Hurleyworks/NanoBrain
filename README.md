@@ -2,10 +2,14 @@
 Famework for experimenting with OptiX 8,0 using OptixUtility from shocker
 https://github.com/shocker-0x15/OptiX_Utility
 
-# Requires
-Cuda 12.3
+# Confirmed Environment
+Cuda 12.3 (probably work with earlier versions)
 OptiX 8.0
+Visual Studio Community 2022
 and assumes that they have been installed in the default locations
+NVIDIA Driver 545.84
+OptiX is supported on Windows and Linux and requires a Nvidia graphics cards with compute capability 5.0 and higher.
+To make sure your GPU is supported, see the list of Nvidia graphics cards.
 
 # Compile OIIO
 1. clone vcpkg into the thirdparty folder
