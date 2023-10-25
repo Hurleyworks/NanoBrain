@@ -15,6 +15,8 @@ TextureHandler::~TextureHandler()
 
 CUtexObject TextureHandler::createCudaTextureFromImage (const std::filesystem::path& fullPath)
 {
+    array.finalize();
+
     OIIO::ImageBuf image = imageCache->getCachedImage (fullPath.generic_string(), false);
 
     OIIO::ImageSpec spec = image.spec();

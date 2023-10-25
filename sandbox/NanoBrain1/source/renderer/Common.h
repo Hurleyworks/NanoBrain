@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-// take from OptiX_Utility
+// taken from OptiX_Utility
 // https://github.com/shocker-0x15/OptiX_Utility/blob/master/LICENSE.md
 
 // Platform defines

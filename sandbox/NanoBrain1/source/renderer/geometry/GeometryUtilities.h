@@ -117,7 +117,7 @@ void generate_normals (const MatrixXu& F, const MatrixXf& V, MatrixXf& N, Matrix
                         }
                     });
 
-    pool.wait_for_tasks(); 
+    pool.wait_for_tasks();
 }
 
 // Rapid Obj helpers
@@ -210,6 +210,14 @@ inline void getUVs (const rapidobj::Result& result, MatrixXf& UV, std::unordered
     }
 }
 
+// The code normalizes the size of a 3D bounding box (represented by AlignedBox3f)
+// so that its largest edge becomes 1 unit long.
+// Here's how it works:
+// Eigen::Vector3f edges = modelBound.max() - modelBound.min();: Calculates the edge
+// lengths by taking the difference between the max and min corners of the box.
+// float maxEdge = std::max (edges.x(), std::max (edges.y(), edges.z()));: Finds the
+// longest edge among x, y, and z dimensions.
+// scale = 1.0f / maxEdge;: Calculates the scale factor needed to make the longest edge 1 unit long.
 inline void normalizeSize (const AlignedBox3f& modelBound, float& scale)
 {
     Eigen::Vector3f edges = modelBound.max() - modelBound.min();
@@ -217,6 +225,16 @@ inline void normalizeSize (const AlignedBox3f& modelBound, float& scale)
     scale = 1.0f / maxEdge; // max
 }
 
+// This code centers and scales the vertices of a 3D model. Here's the breakdown:
+// int pointCount = V.cols();: Gets the number of points (or vertices) in the matrix V.
+// Vector3f center = modelBound.center();: Calculates the center of the model's bounding box.
+// for (int i = 0; i < pointCount; i++): Loops through each vertex.
+// Vector3f pnt = V.col (i);: Grabs the i-th vertex.
+// pnt -= center;: Centers the vertex by subtracting the bounding box center.
+// pnt *= scale;: Scales the vertex using the provided scale.
+// V.col (i) = pnt;: Updates the i-th vertex with the new centered and scaled value.
+// So basically, the code moves the model to be centered at the origin
+// and scales it based on the provided scale value.
 inline void centerVertices (MatrixXf& V, const AlignedBox3f& modelBound, float scale)
 {
     int pointCount = V.cols();

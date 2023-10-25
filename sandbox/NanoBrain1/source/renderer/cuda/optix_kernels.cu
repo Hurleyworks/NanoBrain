@@ -182,6 +182,7 @@ CUDA_DEVICE_KERNEL void RT_CH_NAME (shading)()
         surfaceNormalWorld = normalize (optixTransformNormalFromObjectToWorldSpace (surfaceNormalWorld));
     }
 
+    // From ChatGPT4
     // Basically, this chunk of code helps determine if the ray hits the front or back
     // of a surface and adjusts the normal and hit point accordingly.
 
@@ -222,8 +223,27 @@ CUDA_DEVICE_KERNEL void RT_CH_NAME (shading)()
         *firstHitAlbedo = albedo;
         *firstHitNormal = surfaceNormalWorld;
     }
-    float3 contribution = payload->alpha * albedo;
-    payload->contribution += contribution;
+   
+    // From ChatGPT4
+    // Here's a simplified example of how you might sample the environment map
+    // based on the surface normal to simulate Lambertian reflection:
+    float posPhi, posTheta;
+    toPolarYUp (surfaceNormalWorld, &posPhi, &posTheta);
+
+    float ph = posPhi + plp.envLightRotation;
+
+    float u = ph / (2 * Pi);
+    u -= floorf (u);
+    float v = posTheta / Pi;
+
+    float4 texValue = tex2DLod<float4> (plp.envLightTexture, u, v, 0.0f);
+    float3 environmentLight = make_float3 (texValue);
+    environmentLight *= plp.envLightPowerCoeff;
+
+    float3 lambertReflection = environmentLight / Pi;
+
+    // Update payload's contribution using Lambert's reflection
+    payload->contribution += payload->alpha * albedo * lambertReflection;
 
     // This lambda function generates a local coordinate system (s, t, n) based on the given normal n.
     // This is useful for transforming vectors from one coordinate system to another, like from
