@@ -3,7 +3,7 @@
 View::View (const DesktopWindowSettings& settings) :
     nanogui::Screen (Vector2i (settings.width, settings.height), settings.name, settings.resizable)
 {
-    inc_ref();
+    inc_ref(); // Huh?
 
     m_background = Color{0.23f, 1.0f};
 }

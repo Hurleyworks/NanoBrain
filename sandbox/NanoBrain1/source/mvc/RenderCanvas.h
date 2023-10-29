@@ -129,5 +129,6 @@ class RenderCanvas : public Canvas
 
     void captureAndSaveFrame()
     {
+        // FIXME
     }
 };

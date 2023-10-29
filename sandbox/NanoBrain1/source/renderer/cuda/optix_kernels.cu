@@ -2,233 +2,392 @@
 
 // taken from OptiX_Utility
 // https://github.com/shocker-0x15/OptiX_Utility/blob/master/LICENSE.md
+// and from Shocker GfxExp
+// https://github.com/shocker-0x15/GfxExp
 
 #include "../Shared.h"
+#include <common_device.h>
 
 using namespace Shared;
+using namespace shared;
 
 RT_PIPELINE_LAUNCH_PARAMETERS PipelineLaunchParameters plp;
 
-struct HitPointParameter
-{
-    float b1, b2;
-    int32_t primIndex;
+static constexpr bool useSolidAngleSampling = false;
+static constexpr bool useImplicitLightSampling = true;
+static constexpr bool useExplicitLightSampling = true;
+static constexpr bool useMultipleImportanceSampling = useImplicitLightSampling && useExplicitLightSampling;
+static_assert (useImplicitLightSampling || useExplicitLightSampling, "Invalid configuration for light sampling.");
 
-    CUDA_DEVICE_FUNCTION CUDA_INLINE static HitPointParameter get()
+class LambertBRDF
+{
+    RGB m_reflectance;
+
+ public:
+    CUDA_DEVICE_FUNCTION LambertBRDF (const RGB& reflectance) :
+        m_reflectance (reflectance) {}
+
+    CUDA_DEVICE_FUNCTION void getSurfaceParameters (RGB* diffuseReflectance, RGB* specularReflectance, float* roughness) const
     {
-        HitPointParameter ret;
-        float2 bc = optixGetTriangleBarycentrics();
-        ret.b1 = bc.x;
-        ret.b2 = bc.y;
-        ret.primIndex = optixGetPrimitiveIndex();
-        return ret;
+        *diffuseReflectance = m_reflectance;
+        *specularReflectance = RGB (0.0f, 0.0f, 0.0f);
+        *roughness = 1.0f;
+    }
+
+    CUDA_DEVICE_FUNCTION RGB sampleThroughput (
+        const Vector3D& vGiven, float uDir0, float uDir1,
+        Vector3D* vSampled, float* dirPDensity) const
+    {
+        *vSampled = cosineSampleHemisphere (uDir0, uDir1);
+        *dirPDensity = vSampled->z / Pi;
+        if (vGiven.z <= 0.0f)
+            vSampled->z *= -1;
+        return m_reflectance;
+    }
+
+    CUDA_DEVICE_FUNCTION RGB evaluate (const Vector3D& vGiven, const Vector3D& vSampled) const
+    {
+        if (vGiven.z * vSampled.z > 0)
+            return m_reflectance / Pi;
+        else
+            return RGB (0.0f, 0.0f, 0.0f);
+    }
+    CUDA_DEVICE_FUNCTION float evaluatePDF (const Vector3D& vGiven, const Vector3D& vSampled) const
+    {
+        if (vGiven.z * vSampled.z > 0)
+            return fabs (vSampled.z) / Pi;
+        else
+            return 0.0f;
+    }
+
+    CUDA_DEVICE_FUNCTION RGB evaluateDHReflectanceEstimate (const Vector3D& vGiven) const
+    {
+        return m_reflectance;
     }
 };
 
+
+template <bool computeHypotheticalAreaPDensity, bool useSolidAngleSampling>
+CUDA_DEVICE_FUNCTION CUDA_INLINE void computeSurfacePoint (
+    const Shared::GeometryData& geomInst,
+    uint32_t primIndex, float b1, float b2,
+    const Point3D& referencePoint,
+    Point3D* positionInWorld, Normal3D* shadingNormalInWorld, Vector3D* texCoord0DirInWorld,
+    Normal3D* geometricNormalInWorld, Point2D* texCoord,
+    float* hypAreaPDensity)
+{
+    const Triangle& tri = geomInst.triangleBuffer[primIndex];
+    const Vertex& v0 = geomInst.vertexBuffer[tri.index0];
+    const Vertex& v1 = geomInst.vertexBuffer[tri.index1];
+    const Vertex& v2 = geomInst.vertexBuffer[tri.index2];
+    const Point3D p[3] = {
+        transformPointFromObjectToWorldSpace (v0.position),
+        transformPointFromObjectToWorldSpace (v1.position),
+        transformPointFromObjectToWorldSpace (v2.position),
+    };
+    float b0 = 1 - (b1 + b2);
+
+    // EN: Compute hit point properties in the local coordinates.
+    *positionInWorld = b0 * p[0] + b1 * p[1] + b2 * p[2];
+    Normal3D shadingNormal = b0 * v0.normal + b1 * v1.normal + b2 * v2.normal;
+    Vector3D texCoord0Dir = b0 * v0.texCoord0Dir + b1 * v1.texCoord0Dir + b2 * v2.texCoord0Dir;
+    Normal3D geometricNormal (cross (p[1] - p[0], p[2] - p[0]));
+    float area;
+    if constexpr (computeHypotheticalAreaPDensity && !useSolidAngleSampling)
+        area = 0.5f * length (geometricNormal);
+    else
+        (void)area;
+    *texCoord = b0 * v0.texCoord + b1 * v1.texCoord + b2 * v2.texCoord;
+
+    // EN: Convert the local properties to ones in world coordinates.
+    *shadingNormalInWorld = normalize (transformNormalFromObjectToWorldSpace (shadingNormal));
+    *texCoord0DirInWorld = normalize (transformVectorFromObjectToWorldSpace (texCoord0Dir));
+    *geometricNormalInWorld = normalize (geometricNormal);
+    if (!shadingNormalInWorld->allFinite())
+    {
+        *shadingNormalInWorld = Normal3D (0, 0, 1);
+        *texCoord0DirInWorld = Vector3D (1, 0, 0);
+    }
+    if (!texCoord0DirInWorld->allFinite())
+    {
+        Vector3D bitangent;
+        makeCoordinateSystem (*shadingNormalInWorld, texCoord0DirInWorld, &bitangent);
+    }
+
+    if constexpr (computeHypotheticalAreaPDensity)
+    {
+        // EN: Compute a hypothetical probability density with which the intersection point
+        //     is sampled by explicit light sampling.
+        float lightProb = 1.0f;
+        if (plp.envLightTexture && plp.enableEnvLight)
+            lightProb *= (1 - probToSampleEnvLight);
+
+        if (!isfinite (lightProb))
+        {
+            *hypAreaPDensity = 0.0f;
+            return;
+        }
+
+        *hypAreaPDensity = lightProb / area;
+    }
+}
+
+// Define a struct called HitPointParameter to hold hit point info
+struct HitPointParameter
+{
+    float b1, b2;      // Barycentric coordinates
+    int32_t primIndex; // Index of the primitive hit by the ray
+
+    // Static member function to get hit point parameters
+    CUDA_DEVICE_FUNCTION CUDA_INLINE static HitPointParameter get()
+    {
+        HitPointParameter ret; // Create an instance of the struct
+
+        // Get barycentric coordinates from OptiX API
+        float2 bc = optixGetTriangleBarycentrics();
+
+        // Store the barycentric coordinates in the struct
+        ret.b1 = bc.x;
+        ret.b2 = bc.y;
+
+        // Get the index of the primitive hit by the ray from OptiX API
+        ret.primIndex = optixGetPrimitiveIndex();
+
+        // Return the populated struct
+        return ret;
+    }
+};
+;
+
+// This struct is used to fetch geometry and material data from
+// the Shader Binding Table (SBT) in OptiX.
 struct HitGroupSBTRecordData
 {
-    GeometryData geomData;
-    MaterialData matData;
+    GeometryData geomData;        // Geometry data for the hit object
+    Shared::MaterialData matData; // Material data for the hit object
 
+    // Static member function to retrieve the SBT record data
     CUDA_DEVICE_FUNCTION CUDA_INLINE static const HitGroupSBTRecordData& get()
     {
+        // Use optixGetSbtDataPointer() to get the pointer to the SBT data
+        // Cast the pointer to type HitGroupSBTRecordData and dereference it
         return *reinterpret_cast<HitGroupSBTRecordData*> (optixGetSbtDataPointer());
     }
 };
 
+// Define the main CUDA device kernel for path tracing
 CUDA_DEVICE_KERNEL void RT_RG_NAME (pathTracing)()
 {
+    // Get the launch index for this thread
     uint2 launchIndex = make_uint2 (optixGetLaunchIndex().x, optixGetLaunchIndex().y);
 
+    // Initialize the random number generator
     PCG32RNG rng = plp.rngBuffer[launchIndex];
 
+    // Get camera properties from the pipeline parameters
+    const PerspectiveCamera& camera = plp.camera;
+
+    // Generate random numbers for jittering
     float jx = rng.getFloat0cTo1o();
     float jy = rng.getFloat0cTo1o();
+
+    // Update the RNG buffer
     plp.rngBuffer.write (launchIndex, rng);
 
+    // Compute normalized screen coordinates
     float x = (launchIndex.x + jx) / plp.imageSize.x;
     float y = (launchIndex.y + jy) / plp.imageSize.y;
+
+    // Compute vertical and horizontal view angles
     float vh = 2 * std::tan (plp.camera.fovY * 0.5f);
     float vw = plp.camera.aspect * vh;
 
-    float3 origin = plp.camera.position;
-    float3 direction = normalize (plp.camera.orientation * make_float3 (vw * (0.5f - x), vh * (0.5f - y), 1));
+    // Setup ray origin and direction
+    Point3D origin = camera.position;
+    Vector3D direction = normalize (camera.orientation * Vector3D (vw * (0.5f - x), vh * (0.5f - y), 1));
 
+    // Initialize ray payload
     SearchRayPayload payload;
-    payload.alpha = make_float3 (1.0f, 1.0f, 1.0f);
-    payload.contribution = make_float3 (0.0f, 0.0f, 0.0f);
+    payload.alpha = RGB (1.0f, 1.0f, 1.0f);
+    payload.contribution = RGB (0.0f, 0.0f, 0.0f);
     payload.pathLength = 1;
     payload.terminate = false;
     SearchRayPayload* payloadPtr = &payload;
-    float3 firstHitAlbedo = make_float3 (0.0f, 0.0f, 0.0f);
-    float3 firstHitNormal = make_float3 (0.0f, 0.0f, 0.0f);
-    float3* firstHitAlbedoPtr = &firstHitAlbedo;
-    float3* firstHitNormalPtr = &firstHitNormal;
+
+    RGB firstHitAlbedo (0.0f, 0.0f, 0.0f);
+    Normal3D firstHitNormal (0.0f, 0.0f, 0.0f);
+    RGB* firstHitAlbedoPtr = &firstHitAlbedo;
+    Normal3D* firstHitNormalPtr = &firstHitNormal;
+
+    // Initialize variables for storing hit point properties
+    HitPointParams hitPointParams;
+    hitPointParams.positionInWorld = Point3D (NAN);
+    hitPointParams.prevPositionInWorld = Point3D (NAN);
+    hitPointParams.normalInWorld = Normal3D (NAN);
+    hitPointParams.texCoord = Point2D (NAN);
+    hitPointParams.materialSlot = 0xFFFFFFFF;
+    HitPointParams* hitPointParamsPtr = &hitPointParams;
+
+    // Main path tracing loop
     while (true)
     {
+        // Trace the ray and collect results
         SearchRayPayloadSignature::trace (
-            plp.travHandle, origin, direction,
+            plp.travHandle, origin.toNative(), direction.toNative(),
             0.0f, FLT_MAX, 0.0f, 0xFF, OPTIX_RAY_FLAG_NONE,
             RayType_Search, NumRayTypes, RayType_Search,
-            rng, payloadPtr, firstHitAlbedoPtr, firstHitNormalPtr);
+            rng, payloadPtr, hitPointParamsPtr, firstHitAlbedoPtr, firstHitNormalPtr);
+
+        // Break out of the loop if conditions are met
         if (payload.terminate || payload.pathLength >= 10)
             break;
 
+        // Update ray origin and direction for the next iteration
         origin = payload.origin;
         direction = payload.direction;
         ++payload.pathLength;
     }
 
+    // Store the updated RNG state back to the buffer
     plp.rngBuffer[launchIndex] = rng;
 
-    if (plp.useCameraSpaceNormal)
-    {
-        // Convert the normal into the camera space (right handed, looking down the negative Z-axis).
-        firstHitNormal = transpose (plp.camera.orientation) * firstHitNormal;
-        firstHitNormal.x *= -1;
-    }
+    // Output information for the denoiser
+    firstHitNormal = transpose (camera.orientation) * hitPointParams.normalInWorld;
+    firstHitNormal.x *= -1;
 
-    float3 prevColorResult = make_float3 (0.0f, 0.0f, 0.0f);
-    float3 prevAlbedoResult = make_float3 (0.0f, 0.0f, 0.0f);
-    float3 prevNormalResult = make_float3 (0.0f, 0.0f, 0.0f);
+    RGB prevAlbedoResult (0.0f, 0.0f, 0.0f);
+    RGB prevColorResult (0.0f, 0.0f, 0.0f);
+    Normal3D prevNormalResult (0.0f, 0.0f, 0.0f);
+
     if (plp.numAccumFrames > 0)
     {
-        prevColorResult = getXYZ (plp.colorAccumBuffer.read (launchIndex));
-        prevAlbedoResult = getXYZ (plp.albedoAccumBuffer.read (launchIndex));
-        prevNormalResult = getXYZ (plp.normalAccumBuffer.read (launchIndex));
+        prevColorResult = RGB (getXYZ (plp.colorAccumBuffer.read (launchIndex)));
+        prevAlbedoResult = RGB (getXYZ (plp.albedoAccumBuffer.read (launchIndex)));
+        prevNormalResult = Normal3D (getXYZ (plp.normalAccumBuffer.read (launchIndex)));
     }
+
     float curWeight = 1.0f / (1 + plp.numAccumFrames);
-    float3 colorResult = (1 - curWeight) * prevColorResult + curWeight * payload.contribution;
-    float3 albedoResult = (1 - curWeight) * prevAlbedoResult + curWeight * firstHitAlbedo;
-    float3 normalResult = (1 - curWeight) * prevNormalResult + curWeight * firstHitNormal;
-    plp.colorAccumBuffer.write (launchIndex, make_float4 (colorResult, 1.0f));
-    plp.albedoAccumBuffer.write (launchIndex, make_float4 (albedoResult, 1.0f));
-    plp.normalAccumBuffer.write (launchIndex, make_float4 (normalResult, 1.0f));
+    RGB colorResult = (1 - curWeight) * prevColorResult + curWeight * payload.contribution;
+    RGB albedoResult = (1 - curWeight) * prevAlbedoResult + curWeight * firstHitAlbedo;
+    Normal3D normalResult = (1 - curWeight) * prevNormalResult + curWeight * firstHitNormal;
+
+    plp.colorAccumBuffer.write (launchIndex, make_float4 (colorResult.toNative(), 1.0f));
+    plp.albedoAccumBuffer.write (launchIndex, make_float4 (albedoResult.toNative(), 1.0f));
+    plp.normalAccumBuffer.write (launchIndex, make_float4 (normalResult.toNative(), 1.0f));
 }
 
-CUDA_DEVICE_FUNCTION void toPolarYUp (const float3& v, float* phi, float* theta)
-{
-    *theta = std::acos (min (max (v.y, -1.0f), 1.0f));
-    *phi = std::fmod (std::atan2 (-v.x, v.z) + 2 * Pi,
-                      2 * Pi);
-}
-
+// CUDA kernel for a miss progrm in OptiX
 CUDA_DEVICE_KERNEL void RT_MS_NAME (miss)()
 {
+    // Declare pointers for the ray payload and hit point parameters
     SearchRayPayload* payload;
-    float3* albedo;
-    float3* normal;
-    SearchRayPayloadSignature::get (nullptr, &payload, &albedo, &normal);
+    HitPointParams* hitPntParams;
 
+    // Retrieve ray payload and hit point parameters
+    SearchRayPayloadSignature::get (nullptr, &payload, &hitPntParams, nullptr, nullptr);
+
+    // If there's no environment light texture, apply some basic ambient light and terminate
     if (plp.envLightTexture == 0)
     {
-        payload->contribution += payload->alpha * make_float3 (0.01f, 0.015f, 0.02f);
+        payload->contribution += payload->alpha * RGB (0.01f, 0.015f, 0.02f);
         payload->terminate = true;
         return;
     }
+    // Store the normalized direction as the surface normal
+    // Get the inverse of the ray direction in world space
+    Vector3D vOut (-Vector3D (optixGetWorldRayDirection()));
+    hitPntParams->normalInWorld = Normal3D (vOut);
 
-    float3 p = optixGetWorldRayDirection();
-
-    float posPhi, posTheta;
-    toPolarYUp (p, &posPhi, &posTheta);
+    Vector3D rayDir = normalize (Vector3D (optixGetWorldRayDirection()));
+    float posPhi, theta;
+    toPolarYUp (rayDir, &posPhi, &theta);
 
     float phi = posPhi + plp.envLightRotation;
+    phi = phi - floorf (phi / (2 * Pi)) * 2 * Pi;
+    Point2D texCoord (phi / (2 * Pi), theta / Pi);
 
-    float u = phi / (2 * Pi);
-    u -= floorf (u);
-    float v = posTheta / Pi;
+    
+    float4 texValue = tex2DLod<float4> (plp.envLightTexture, texCoord.x, texCoord.y, 0.0f);
+    RGB luminance = plp.envLightPowerCoeff * RGB (texValue.x, texValue.y, texValue.z);
+    float misWeight = 1.0f;
+    if constexpr (true)
+    {
+        float uvPDF = plp.envLightImportanceMap.evaluatePDF (texCoord.x, texCoord.y);
+        float hypAreaPDensity = uvPDF / (2 * Pi * Pi * std::sin (theta));
+        // FIXME
 
-    //  if (plp.numAccumFrames == 2)
-    //     pixelprintf (launchIndex, 100, 100, "%f-%f-%u \n", u, v, plp.numAccumFrames);
+        float lightPDensity =
+            (plp.lightInstDist.integral() > 0.0f ? probToSampleEnvLight : 1.0f) *
+            hypAreaPDensity;
+        // FIXME
+        // float bsdfPDensity = rwPayload->prevDirPDensity;
+        float bsdfPDensity = 0.5f; // just guessing
+        misWeight = pow2 (bsdfPDensity) / (pow2 (bsdfPDensity) + pow2 (lightPDensity));
+    }
+    payload->contribution += payload->alpha * luminance * misWeight;
 
-    float4 texValue = tex2DLod<float4> (plp.envLightTexture, u, v, 0.0f);
-    float3 luminance = make_float3 (texValue);
-    luminance *= plp.envLightPowerCoeff;
-
-    payload->contribution += payload->alpha * luminance / Pi;
-
+    // Terminate the ray
     payload->terminate = true;
 }
 
+// CUDA kernel for a closest hit progrm in OptiX
 CUDA_DEVICE_KERNEL void RT_CH_NAME (shading)()
 {
     auto sbtr = HitGroupSBTRecordData::get();
-    const MaterialData& mat = sbtr.matData;
+    const Shared::MaterialData& mat = sbtr.matData;
     const GeometryData& geom = sbtr.geomData;
 
     PCG32RNG rng;
     SearchRayPayload* payload;
-    float3* firstHitAlbedo;
-    float3* firstHitNormal;
-    SearchRayPayloadSignature::get (&rng, &payload, &firstHitAlbedo, &firstHitNormal);
+    RGB* firstHitAlbedo;
+    Normal3D* firstHitNormal;
+    HitPointParams* hitPntParams;
+    SearchRayPayloadSignature::get (&rng, &payload, &hitPntParams, &firstHitAlbedo, &firstHitNormal);
+
+    const Point3D rayOrigin (optixGetWorldRayOrigin());
 
     auto hp = HitPointParameter::get();
-    float3 hitPointWorld;
-    float3 surfaceNormalWorld;
-    float2 texCoord;
-    {
-        const Triangle& tri = geom.triangleBuffer[hp.primIndex];
-        const Vertex& v0 = geom.vertexBuffer[tri.index0];
-        const Vertex& v1 = geom.vertexBuffer[tri.index1];
-        const Vertex& v2 = geom.vertexBuffer[tri.index2];
-        float b1 = hp.b1;
-        float b2 = hp.b2;
-        float b0 = 1 - (b1 + b2);
-        hitPointWorld = b0 * v0.position + b1 * v1.position + b2 * v2.position;
-        surfaceNormalWorld = b0 * v0.normal + b1 * v1.normal + b2 * v2.normal;
-        texCoord = b0 * v0.texCoord + b1 * v1.texCoord + b2 * v2.texCoord;
+    Point3D positionInWorld;
+    Normal3D shadingNormalInWorld;
+    Vector3D texCoord0DirInWorld;
+    Normal3D geometricNormalInWorld;
+    Point2D texCoord;
+    float hypAreaPDensity;
+    computeSurfacePoint<useMultipleImportanceSampling, useSolidAngleSampling> (
+        geom, hp.primIndex, hp.b1, hp.b2,
+        rayOrigin,
+        &positionInWorld, &shadingNormalInWorld, &texCoord0DirInWorld,
+        &geometricNormalInWorld, &texCoord, &hypAreaPDensity);
+    if constexpr (!useMultipleImportanceSampling)
+        (void)hypAreaPDensity;
 
-        hitPointWorld = optixTransformPointFromObjectToWorldSpace (hitPointWorld);
-        surfaceNormalWorld = normalize (optixTransformNormalFromObjectToWorldSpace (surfaceNormalWorld));
-    }
+    Vector3D vOut = normalize (-Vector3D (optixGetWorldRayDirection()));
+    float frontHit = dot (vOut, geometricNormalInWorld) >= 0.0f ? 1.0f : -1.0f;
 
-    // From ChatGPT4
-    // Basically, this chunk of code helps determine if the ray hits the front or back
-    // of a surface and adjusts the normal and hit point accordingly.
+    ReferenceFrame shadingFrame (shadingNormalInWorld, texCoord0DirInWorld);
 
-    // Ah, got it. If you used the incoming ray direction optixGetWorldRayDirection()
-    // instead of its negative -optixGetWorldRayDirection() for isFrontFace, the logic would flip.
-    // Specifically, a positive dot product would then indicate a back-face hit, and a negative
-    // or zero would indicate a front-face hit. This is because the incoming ray direction and
-    // the surface normal would be pointing in roughly the same direction for back-face hits,
-    // making the dot product positive.
+    positionInWorld = offsetRayOrigin (positionInWorld, frontHit * geometricNormalInWorld);
+    Vector3D vOutLocal = shadingFrame.toLocal (vOut);
 
-    // So yes, you could use the incoming ray direction, but you'd need to
-    // adjust the logic of the isFrontFace check accordingly.
-
-    // vOut is the opposite of the incoming ray direction in world coordinates.
-    float3 vOut = -optixGetWorldRayDirection();
-
-    // This line checks if the ray hits the front face of the surface.
-    // If the dot product is positive, it means the surface normal and
-    // the ray direction are somewhat aligned, indicating a front-face hit.
-    bool isFrontFace = dot (vOut, surfaceNormalWorld) > 0;
-
-    // If it's not a front-face hit, the code flips the normal to point outward.
-    if (!isFrontFace)
-        surfaceNormalWorld = -surfaceNormalWorld;
-
-    // This nudges the hit point slightly along the surface normal to
-    // avoid self-intersection in future ray casts.
-    hitPointWorld = hitPointWorld + surfaceNormalWorld * 0.001f;
-
-    float3 albedo;
+    RGB albedo;
     if (mat.texture)
-        albedo = getXYZ (tex2DLod<float4> (mat.texture, texCoord.x, texCoord.y, 0.0f));
+        albedo = RGB (getXYZ (tex2DLod<float4> (mat.texture, texCoord.x, texCoord.y, 0.0f)));
     else
-        albedo = mat.albedo;
+        albedo = RGB (mat.albedo);
 
-    if (payload->pathLength == 1)
-    {
-        *firstHitAlbedo = albedo;
-        *firstHitNormal = surfaceNormalWorld;
-    }
-   
-    // From ChatGPT4
-    // Here's a simplified example of how you might sample the environment map
+    // generate next ray.
+    Vector3D vInLocal;
+    float dirPDensity;
+    LambertBRDF bsdf (albedo);
+    payload->alpha *= bsdf.sampleThroughput (
+        vOutLocal, rng.getFloat0cTo1o(), rng.getFloat0cTo1o(),
+        &vInLocal, &dirPDensity);
+    Vector3D vIn = shadingFrame.fromLocal (vInLocal);
+
+    // A simplified example of how you might sample the environment map
     // based on the surface normal to simulate Lambertian reflection:
     float posPhi, posTheta;
-    toPolarYUp (surfaceNormalWorld, &posPhi, &posTheta);
+    toPolarYUp (Vector3D (shadingNormalInWorld), &posPhi, &posTheta);
 
     float ph = posPhi + plp.envLightRotation;
 
@@ -237,64 +396,26 @@ CUDA_DEVICE_KERNEL void RT_CH_NAME (shading)()
     float v = posTheta / Pi;
 
     float4 texValue = tex2DLod<float4> (plp.envLightTexture, u, v, 0.0f);
-    float3 environmentLight = make_float3 (texValue);
+    RGB environmentLight (texValue.x, texValue.y, texValue.z);
     environmentLight *= plp.envLightPowerCoeff;
 
-    float3 lambertReflection = environmentLight / Pi;
+    RGB lambertReflection (environmentLight / Pi);
 
     // Update payload's contribution using Lambert's reflection
     payload->contribution += payload->alpha * albedo * lambertReflection;
 
-    // This lambda function generates a local coordinate system (s, t, n) based on the given normal n.
-    // This is useful for transforming vectors from one coordinate system to another, like from
-    // the global coordinate system to a surface-local one.
-    const auto makeCoordinateSystem = [] (const float3& n, float3* s, float3* t)
+    hitPntParams->normalInWorld = shadingNormalInWorld;
+    if (payload->pathLength == 1)
     {
-        // Here, sign, a, and b are calculated to construct the s and t vectors.
-        // They are part of the mathematical magic that simplifies the coordinate system generation..
-        float sign = n.z >= 0 ? 1 : -1;
-        float a = -1 / (sign + n.z);
-        float b = n.x * n.y * a;
+        *firstHitAlbedo = albedo;
+        *firstHitNormal = shadingNormalInWorld;
+    }
 
-        // s and t are the local coordinate system basis vectors perpendicular to n.
-        *s = make_float3 (1 + sign * n.x * n.x * a, sign * b, -sign * n.x);
-        *t = make_float3 (b, sign + n.y * n.y * a, -n.y);
-    };
-
-    float3 s;
-    float3 t;
-    makeCoordinateSystem (surfaceNormalWorld, &s, &t);
-
-    // generate random incoming direction
-    // phi and theta are random angles, generated to produce a random incoming direction vIn.
-    float phi = 2 * Pi * rng.getFloat0cTo1o();
-    float theta = std::asin (std::sqrt (rng.getFloat0cTo1o()));
-    float sinTheta = std::sin (theta);
-
-    // Here, vIn is calculated in spherical coordinates. This is a general way to express directions in 3D space.
-    float3 vIn = make_float3 (std::cos (phi) * sinTheta, std::sin (phi) * sinTheta, std::cos (theta));
-
-    // the ultimate goal is to get vIn in world coordinates, but this code is doing it in a roundabout way.
-    // It initially calculates vIn in a local coordinate system where the surface normal (surfaceNormalWorld) is the z-axis.
-    // This makes the math for random sampling easier.
-
-    // This code is actually converting vIn back to world coordinates.
-    // It does this by taking the vIn defined in this local coordinate system
-    // and dotting it with each of the basis vectors (s, t, surfaceNormalWorld) to get the
-    // components in the world coordinates.
-
-    // So, to sum it up, vIn starts out in a convenient local coordinate system for the calculations
-    // and then gets transformed back to world coordinates.
-    vIn = make_float3 (dot (make_float3 (s.x, t.x, surfaceNormalWorld.x), vIn),
-                       dot (make_float3 (s.y, t.y, surfaceNormalWorld.y), vIn),
-                       dot (make_float3 (s.z, t.z, surfaceNormalWorld.z), vIn));
-
-    payload->alpha = payload->alpha * albedo;
-    payload->origin = hitPointWorld;
+    payload->origin = positionInWorld;
     payload->direction = vIn;
     payload->terminate = false;
 
-    SearchRayPayloadSignature::set (&rng, nullptr, nullptr, nullptr);
+    SearchRayPayloadSignature::set (&rng, nullptr, nullptr, nullptr, nullptr);
 }
 
 CUDA_DEVICE_KERNEL void RT_AH_NAME (visibility)()

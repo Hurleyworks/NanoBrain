@@ -30,6 +30,8 @@
 #include <future>
 #include <semaphore>
 #include <concepts>
+#include <numbers>
+#include <variant>
 
 #ifdef __clang__
 #include <experimental/coroutine>
@@ -62,6 +64,10 @@
 #include <nano_signal/nano_mutex.hpp>
 using Observer = Nano::Observer<>;
 
+//BS_thread_pool
+#include <BSthread/BS_thread_pool.h>
+#include <BSthread/BS_thread_pool_light.h>
+
 // json
 #include <json/json.hpp>
 using nlohmann::json;
@@ -69,9 +75,6 @@ using nlohmann::json;
 // some useful tools and defines outside mace namespace
 #include "excludeFromBuild/basics/Defaults.h"
 #include "excludeFromBuild/basics/Util.h"
-
-#include "excludeFromBuild/thread/BS_thread_pool.h"
-#include "excludeFromBuild/thread/BS_thread_pool_light.h"
 
 namespace mace
 {

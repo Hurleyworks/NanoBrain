@@ -23,9 +23,6 @@ using namespace nanogui;
 // When a signal is emitted, all the connected slots get called.
 // It's like an advanced callback system. Qt framework, for C++, popularized this pattern.
 
-// Opinion: It's a neat way to decouple components, making your code more modular
-// and easier to maintain, especially in GUI applications.
-
 using OnDropSignal = Nano::Signal<void (const std::vector<std::string>&)>;
 using OnPhyicsEngineChangeSignal = Nano::Signal<void (PhysicsEngineState)>;
 

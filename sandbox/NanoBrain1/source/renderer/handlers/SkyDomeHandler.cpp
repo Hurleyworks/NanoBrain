@@ -16,16 +16,6 @@ void SkyDomeHandler::addSkyDomeImage (const OIIO::ImageBuf&& image)
 {
     ScopedStopWatch sw ("ADDING SKYDOME");
 
-    // FIXME
-    if (image.spec().nchannels != 3)
-    {
-        return;
-    }
-
-    assert (image.spec().format == OIIO::TypeDesc::FLOAT);
-
-    finalize();
-
     // need to add an alpha channel
     int channelorder[] = {0, 1, 2, 3};
     float channelvalues[] = {0 /*ignore*/, 0 /*ignore*/, 0 /*ignore*/, 1.0f};
@@ -45,11 +35,12 @@ void SkyDomeHandler::addSkyDomeImage (const OIIO::ImageBuf&& image)
     int32_t height = spec.height;
 
     // don't delete ... owned by ImageBuf
-    float* const textureData = static_cast<float*> (rgba.localpixels());
+    float* textureData = static_cast<float*> (rgba.localpixels());
 
+    float* const importanceData = new float[width * height];
     for (int y = 0; y < height; ++y)
     {
-        float theta = M_PI * (y + 0.5f) / height;
+        float theta = pi_v<float> * (y + 0.5f) / height;
         float sinTheta = std::sin (theta);
         for (int x = 0; x < width; ++x)
         {
@@ -57,14 +48,24 @@ void SkyDomeHandler::addSkyDomeImage (const OIIO::ImageBuf&& image)
             textureData[idx + 0] = std::max (textureData[idx + 0], 0.0f);
             textureData[idx + 1] = std::max (textureData[idx + 1], 0.0f);
             textureData[idx + 2] = std::max (textureData[idx + 2], 0.0f);
+            RGB value (textureData[idx + 0],
+                       textureData[idx + 1],
+                       textureData[idx + 2]);
+            importanceData[y * width + x] = sRGB_calcLuminance (value) * sinTheta;
         }
     }
 
-    skydomePixels.initialize2D (
+    envLightArray.initialize2D (
         ctx->cuCtx, cudau::ArrayElementType::Float32, 4,
         cudau::ArraySurface::Disable, cudau::ArrayTextureGather::Disable,
         width, height, 1);
-    skydomePixels.write (textureData, width * height * 4);
 
-    skydomeTexture = sampler_float.createTextureObject (skydomePixels);
+    envLightArray.write (textureData, width * height * 4);
+
+    envLightImportanceMap.initialize (
+        ctx->cuCtx, cudau::BufferType::Device, importanceData, width, height);
+
+    delete[] importanceData;
+
+    envLightTexture = sampler_float.createTextureObject (envLightArray);
 }

@@ -1,6 +1,10 @@
 
 #pragma once
 
+// much taken from Shocker GfxExp
+// https://github.com/shocker-0x15/GfxExp
+
+#include "../common_host.h"
 #include "../RenderContext.h"
 
 using SkyDomeHandlerRef = std::shared_ptr<class SkyDomeHandler>;
@@ -16,24 +20,27 @@ class SkyDomeHandler
     ~SkyDomeHandler();
 
     void addSkyDomeImage (const OIIO::ImageBuf&& image);
+     
+    CUtexObject getEviroTexture() { return envLightTexture; }
+    RegularConstantContinuousDistribution2D& getImportanceMap() { return envLightImportanceMap; }
 
-    CUtexObject getSkyDomeTexture() { return skydomeTexture; }
     void finalize()
     {
-        if (skydomeTexture)
+        if (envLightTexture)
         {
             CUDADRV_CHECK (cuStreamSynchronize (ctx->cuStr));
-            cuTexObjectDestroy (skydomeTexture);
-            skydomeTexture = 0;
+            cuTexObjectDestroy (envLightTexture);
+            envLightTexture = 0;
         }
 
-        skydomePixels.finalize();
+        envLightArray.finalize();
     }
 
  private:
     RenderContextPtr ctx = nullptr;
 
-    cudau::Array skydomePixels;
-    CUtexObject skydomeTexture = 0;
+    cudau::Array envLightArray;
+    CUtexObject envLightTexture = 0;
+    RegularConstantContinuousDistribution2D envLightImportanceMap;
 
 }; // end class SkyDomeHandler

@@ -85,6 +85,7 @@ void PipelineHandler::setupPipeline (const PipelineData& data)
     // generation program. and from the closest hit program
     uint32_t traceDepth = 2;
     opl.link (traceDepth);
+
     opl.setNumMissRayTypes (data.numOfRayTypes);
     opl.setMissProgram (data.searchRay, pl->programs[ProgramType::miss]);
     opl.setMissProgram (data.visibilityRay, pl->emptyMissProgram);
@@ -114,4 +115,3 @@ void PipelineHandler::setSceneDependentSBT (EntryPointType type)
 
     opl.setHitGroupShaderBindingTable (pl->sceneDependentSBT, pl->sceneDependentSBT.getMappedPointer());
 }
-

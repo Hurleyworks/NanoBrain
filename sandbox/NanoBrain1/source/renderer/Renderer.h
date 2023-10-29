@@ -22,7 +22,7 @@ class Renderer
 
  private:
     RenderContextPtr ctx = nullptr;                           // Rendering ctx
-    optixu::HostBlockBuffer2D<Shared::PCG32RNG, 1> rngBuffer; // random number generator
+    optixu::HostBlockBuffer2D<shared::PCG32RNG, 1> rngBuffer; // random number generator
 
     Shared::PipelineLaunchParameters plp; // Pipeline launch parameters
     CUdeviceptr plpOnDevice;              // Device pointer for pipeline launch parameters
@@ -43,12 +43,13 @@ class Renderer
         auto& right = camera->getRight();
         auto& up = camera->getUp();
 
-        float3 camRight, camUp, camForward, camEye;
+        Vector3D camRight, camUp, camForward;
+        Point3D camEye;
 
-        camUp = make_float3 (up.x(), up.y(), up.z());
-        camRight = make_float3 (right.x(), right.y(), right.z());
-        camForward = make_float3 (forward.x(), forward.y(), forward.z());
-        camEye = make_float3 (eye.x(), eye.y(), eye.z());
+        camUp = Vector3D (up.x(), up.y(), up.z());
+        camRight = Vector3D (right.x(), right.y(), right.z());
+        camForward = Vector3D (forward.x(), forward.y(), forward.z());
+        camEye = Point3D (eye.x(), eye.y(), eye.z());
 
         plp.camera.aspect = camera->getSensor()->getPixelAspectRatio();
         plp.camera.fovY = camera->getVerticalFOVradians();

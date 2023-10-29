@@ -24,4 +24,5 @@ end
 	outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 	
 	include "tests/OIIO"
+	include "tests/ShockerEigen"
 	

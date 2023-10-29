@@ -171,9 +171,7 @@ struct PhysicsDesc
 };
 
 // Converts from Eigen Affine transforms to Newton matrices
-inline bool eigenToNewton (const Eigen::Affine3f& transform, ndMatrix& pose)
+inline void eigenToNewton (const Eigen::Affine3f& transform, ndMatrix& pose)
 {
     std::memcpy (&pose[0][0], transform.data(), 16 * sizeof (float));
-
-    return true;
 }

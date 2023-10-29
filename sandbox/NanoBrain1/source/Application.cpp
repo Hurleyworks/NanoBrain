@@ -21,6 +21,11 @@ class Application : public Jahley::App
         camera = std::make_shared<CameraBody>();
         camera->setFocalLength (0.055f); // 55 mm lens
         camera->lookAt (Eigen::Vector3f (0.0f, 0.0f, 3.5f), Eigen::Vector3f (0.0f, 0.0f, 0.0f), Eigen::Vector3f (0.0f, 1.0f, 0.0f));
+
+        std::string resourceFolder = getResourcePath (APP_NAME);
+        std::string repoFolder = getRepositoryPath (APP_NAME);
+
+        model.init (camera, resourceFolder, repoFolder);
     }
 
     ~Application()
@@ -32,11 +37,6 @@ class Application : public Jahley::App
     {
         view->initialize();
         controller.initialize();
-
-        std::string resourceFolder = getResourcePath (APP_NAME);
-        std::string repoFolder = getRepositoryPath (APP_NAME);
-
-        model.init (camera, resourceFolder, repoFolder);
 
         // connect signals/slots
         view->dropEmitter.connect<&Model::onDrop> (model);

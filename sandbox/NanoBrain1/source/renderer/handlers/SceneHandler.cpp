@@ -1,9 +1,5 @@
 #include "SceneHandler.h"
 #include "Handlers.h"
-#include <numbers>
-
-template <std::floating_point T>
-static constexpr T pi_v = std::numbers::pi_v<T>;
 
 SceneHandler::SceneHandler (RenderContextPtr ctx) :
     ctx (ctx)
@@ -139,7 +135,7 @@ void SceneHandler::updateMotion()
 
     for (auto& it : nodes)
     {
-        OptiXNode node = it.second;
+        OptiXNode& node = it.second;
 
         // Set the instance transform using the given pose
         const Eigen::Matrix4f& m = node->st.worldTransform.matrix();

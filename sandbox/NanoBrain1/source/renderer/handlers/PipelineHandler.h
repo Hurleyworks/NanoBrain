@@ -1,6 +1,6 @@
 #pragma once
 
-// some taken from OptiX_Utility
+// much taken from OptiX_Utility
 // https://github.com/shocker-0x15/OptiX_Utility/blob/master/LICENSE.md
 
 #include "../RenderContext.h"

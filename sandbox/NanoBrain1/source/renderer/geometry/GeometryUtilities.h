@@ -27,7 +27,7 @@ using rapidobj::Mesh;
 #define RCPOVERFLOW RCPOVERFLOW_DBL
 #endif
 
-// Fast acos implementation from Instant Meshes
+// Fast acos implementation from Instant Meshes https://github.com/wjakob/instant-meshes
 inline float fast_acos (float x)
 {
     float negate = float (x < 0.0f);

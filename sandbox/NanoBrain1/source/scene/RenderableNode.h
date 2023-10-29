@@ -24,10 +24,10 @@ class OptiXRenderable
 
     // geometry instances have no geometry
     bool isInstance() { return g == nullptr; }
-    
+
     // static bodies have no mass
     bool isStaticBody() { return desc.mass == 0.0f; }
-  
+
     SpaceTime st;
     OptiXGeometryRef g = nullptr;
     PhysicsDesc desc;
@@ -40,7 +40,6 @@ class OptiXRenderable
 
     void* userdata = nullptr;
 };
-
 
 using RenderableStack = moodycamel::ConcurrentQueue<OptiXNode>; // threadsafe queue
 using GeometryInstances = std::vector<OptiXNode>;

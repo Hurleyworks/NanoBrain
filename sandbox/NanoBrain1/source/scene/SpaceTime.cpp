@@ -18,15 +18,13 @@ void SpaceTime::reset()
 	startTransform.setIdentity();
 	localTransform.setIdentity();
 	worldTransform.setIdentity();
-	previousWorldTransform.setIdentity();
 
 	modelBound.setEmpty();
 	worldBound.setEmpty();
 
 	scale = Vector3f::Ones();
     startScale = scale;
-	previousScale = scale;
-
+	
 	modeledOffset = Vector3f::Zero();
 	centerOfVertexMass = modeledOffset;
 }

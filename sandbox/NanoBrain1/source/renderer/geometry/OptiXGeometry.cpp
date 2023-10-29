@@ -109,9 +109,9 @@ void OptiXTriangleMesh<VertexType, TriangleType, GeometryData>::createGeometry (
         Vector2f uv = UV.col (i);
 
         VertexType vertex;
-        vertex.position = make_float3 (v.x(), v.y(), v.z());
-        vertex.normal = make_float3 (n.x(), n.y(), n.z());
-        vertex.texCoord = make_float2 (uv.y(), uv.x());
+        vertex.position = Point3D(v.x(), v.y(), v.z());
+        vertex.normal = Normal3D (n.x(), n.y(), n.z());
+        vertex.texCoord = Point2D (uv.y(), uv.x());
 
         vertices.push_back (vertex);
     }
@@ -228,4 +228,4 @@ void OptiXTriangleMesh<VertexType, TriangleType, GeometryData>::extractTriangleI
 }
 
 // Explicit Instantiation
-template class OptiXTriangleMesh<Shared::Vertex, Shared::Triangle, Shared::GeometryData>;
+template class OptiXTriangleMesh<shared::Vertex, shared::Triangle, Shared::GeometryData>;

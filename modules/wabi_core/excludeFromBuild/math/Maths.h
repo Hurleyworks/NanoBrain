@@ -1,8 +1,6 @@
 #pragma once
 
 // taken from GeometricTools Boost License https://www.geometrictools.com/
-
-
 template <typename T>
 class Math
 {

@@ -46,7 +46,7 @@ optixu::Material MaterialHandler::createMaterial (const MaterialInfo& info, rapi
         }
     }
 
-    data.albedo = make_float3 (sRGB_degamma_s (material.diffuse[0]), sRGB_degamma_s (material.diffuse[1]), sRGB_degamma_s (material.diffuse[2]));
+    data.albedo = RGB (sRGB_degamma_s (material.diffuse[0]), sRGB_degamma_s (material.diffuse[1]), sRGB_degamma_s (material.diffuse[2]));
 
     // Set user data on the Optix material.
     mat.setUserData (data);
@@ -72,7 +72,7 @@ optixu::Material MaterialHandler::createDefaultMaterial (const MaterialInfo& inf
         mat.setHitGroup (info.rayTypeVisibility, pl->hitPrograms[info.visibilityProg]);
 
     MaterialData data = {};
-    data.albedo = make_float3 (sRGB_degamma_s (1.0f), sRGB_degamma_s (0.5f), sRGB_degamma_s (0.0f));
+    data.albedo = RGB (sRGB_degamma_s (1.0f), sRGB_degamma_s (0.5f), sRGB_degamma_s (0.0f));
 
     // Set user data on the Optix material.
     mat.setUserData (data);

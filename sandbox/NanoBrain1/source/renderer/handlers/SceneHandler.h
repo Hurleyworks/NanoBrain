@@ -18,7 +18,6 @@ class SceneHandler
     SceneHandler (RenderContextPtr ctx);
     ~SceneHandler();
 
-    // Create a scene instance with given GAS and Pose
     void createInstance (OptiXNode node, EntryPointType type);
     void createGeometryInstances (GeometryInstances& instances, EntryPointType type);
 

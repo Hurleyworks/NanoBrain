@@ -22,8 +22,8 @@ CUDA_DEVICE_KERNEL void copyBuffers(
     uint32_t linearIndex = launchIndex.y * imageSize.x + launchIndex.x;
     linearColorBuffer[linearIndex] = colorAccumBuffer.read(launchIndex);
     linearAlbedoBuffer[linearIndex] = albedoAccumBuffer.read(launchIndex);
-    float3 normal = getXYZ(normalAccumBuffer.read(launchIndex));
+    Normal3D normal (getXYZ (normalAccumBuffer.read (launchIndex)));
     if (normal.x != 0 || normal.y != 0 || normal.z != 0)
         normal = normalize(normal);
-    linearNormalBuffer[linearIndex] = make_float4(normal, 1.0f);
+    linearNormalBuffer[linearIndex] = make_float4 (normal.toNative(), 1.0f);
 }

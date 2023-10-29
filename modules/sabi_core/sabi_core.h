@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../wabi_core/wabi_core.h"
-
 #include <rapidobj/rapidobj.hpp>
 
 constexpr float DEFAULT_ZOOM_FACTOR = 0.5f;

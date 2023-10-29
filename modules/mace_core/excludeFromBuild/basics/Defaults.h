@@ -2,7 +2,6 @@
 
 // You can make it constexpr if its value is known at compile - time and won't change.
 // constexpr ensures that the value is computed at compile-time.
-
 constexpr uint32_t DEFAULT_GUI_HEADER_HEIGHT = 40; // pixels
 constexpr uint32_t DEFAULT_GUI_FOOTER_HEIGHT = 40; // pixels
 

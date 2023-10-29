@@ -60,7 +60,7 @@ void CudaCompiler::compile (const std::filesystem::path& resourceFolder, const s
         args.push_back ("--cudart");
         args.push_back ("shared");
         args.push_back ("--std");
-        args.push_back ("c++17");
+        args.push_back ("c++20");
         args.push_back ("-rdc");
         args.push_back ("true");
         args.push_back ("--expt-relaxed-constexpr");
@@ -93,16 +93,8 @@ void CudaCompiler::compile (const std::filesystem::path& resourceFolder, const s
 
         args.push_back ("--output-file");
 
-        std::string outPath;
-        if (ptx)
-        {
-            outPath = (outputFolder / f.stem()).string() + ".ptx";
-        }
-        else
-        {
-            outPath = (outputFolder / f.stem()).string() + ".optixir";
-        }
-
+        std::string outPath = ptx ? (outputFolder / f.stem()).string() + ".ptx" : (outputFolder / f.stem()).string() + ".optixir";
+     
         LOG (DBUG) << outPath;
         args.push_back (outPath);
 

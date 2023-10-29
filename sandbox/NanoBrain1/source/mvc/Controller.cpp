@@ -59,7 +59,6 @@ void Controller::onInputEvent (const InputEvent& input, CameraHandle& camera)
             {
                 camera->setDirty (true);
                 buttonPressed = InputEvent::MouseButton::Right;
-                // LOG (DBUG) << "-----------------------Front end PICKING: " << input.getX() << ", " << input.getY();
             }
 
             break;

@@ -16,14 +16,12 @@ class SpaceTime
     Affine3f startTransform;
     Affine3f localTransform;
     Affine3f worldTransform;
-    Affine3f previousWorldTransform;
-
+ 
     AlignedBox3f modelBound;
     AlignedBox3f worldBound;
 
     Vector3f scale;
     Vector3f startScale;
-    Vector3f previousScale;
 
     Vector3f modeledOffset;
     Vector3f centerOfVertexMass;
@@ -44,11 +42,9 @@ class SpaceTime
         mace::matStr4f (startTransform, DBUG, "Start transform");
         mace::matStr4f (localTransform, DBUG, "Local transform");
         mace::matStr4f (worldTransform, DBUG, "World transform");
-        mace::matStr4f (previousWorldTransform, DBUG, "Previous world transform");
 
         mace::vecStr3f (scale, DBUG, "Scale");
         mace::vecStr3f (startScale, DBUG, "Start scale");
-        mace::vecStr3f (previousScale, DBUG, "Previous scale");
 
         mace::vecStr3f (modelBound.min(), DBUG, "ModelBound min");
         mace::vecStr3f (modelBound.max(), DBUG, "ModelBound max");

@@ -17,6 +17,7 @@ project  "NanoBrain1"
     { 
       SOURCE_DIR .. "**.h", 
       SOURCE_DIR .. "**.hpp", 
+	  SOURCE_DIR .. "**.cuh", 
       SOURCE_DIR .. "**.c",
       SOURCE_DIR .. "**.cpp",
 	  SOURCE_DIR .. "**.cu",

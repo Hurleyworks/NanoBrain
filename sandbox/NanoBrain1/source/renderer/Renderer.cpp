@@ -153,8 +153,11 @@ void Renderer::addSkyDomeImage (const OIIO::ImageBuf&& image)
     }
 
     ctx->handlers->skydome->addSkyDomeImage (std::move (image));
-    plp.envLightTexture = ctx->handlers->skydome->getSkyDomeTexture();
+    plp.envLightTexture = ctx->handlers->skydome->getEviroTexture();
+    ctx->handlers->skydome->getImportanceMap().getDeviceType (&plp.envLightImportanceMap);
+
     plp.enableEnvLight = 1;
+    CUDADRV_CHECK (cuMemcpyHtoD (plpOnDevice, &plp, sizeof (plp)));
 }
 
 void Renderer::addRenderableNode (OptiXNode node, const std::filesystem::path& path)

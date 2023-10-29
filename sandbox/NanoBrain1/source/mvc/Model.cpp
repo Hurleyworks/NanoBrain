@@ -74,7 +74,7 @@ void Model::processPath (const std::filesystem::path& p)
     {
         if (hasObjExtension (p))
         {
-            OptiXGeometryRef g = OptiXTriangleMesh<Shared::Vertex, Shared::Triangle, Shared::GeometryData>::create();
+            OptiXGeometryRef g = OptiXTriangleMesh<shared::Vertex, shared::Triangle, Shared::GeometryData>::create();
             g->fromFile (p);
 
             OptiXNode node = OptiXRenderable::create();

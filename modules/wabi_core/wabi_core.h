@@ -22,8 +22,6 @@ using VectorXu = Eigen::Matrix<uint32_t, Eigen::Dynamic, 1>;
 using VectorXb = Eigen::Matrix<bool, Eigen::Dynamic, 1>;
 using MatrixXi = Eigen::Matrix<int32_t, Eigen::Dynamic, Eigen::Dynamic>;
 
-
-
 namespace wabi
 {
 	// math
