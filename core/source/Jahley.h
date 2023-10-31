@@ -27,11 +27,13 @@ inline std::string getCommonContentFolder()
     // Extract the path up to the repository
     std::string pathToRepro = fullPath.substr (0, pos + std::string (REPOSITORY_NAME).length());
 
-    // Calculate the parent's parent directory (root folder)
-    std::filesystem::path rootFolder = std::filesystem::path (pathToRepro).parent_path().parent_path();
+    // Create the common folder path string
+    std::string commonFolder = pathToRepro + "/resources/Common/";
 
-    // Return the common content folder path
-    return rootFolder.string() + "/common_content/";
+    // Create the folder if it doesn't exist
+    std::filesystem::create_directories (commonFolder);
+
+    return commonFolder;
 }
 
 // Function to get the resource path for a given application name
