@@ -2,7 +2,7 @@
 #include "CudaCompiler.h"
 #include <reproc++/run.hpp>
 
-bool CudaCompiler::hasFolderChanged (const std::string& folderPath, const std::string& jsonFilePath)
+bool CudaCompiler::hasFolderChanged (const std::string& folderPath, const std::string& jsonFilePath, const std::string& buildMode)
 {
     nlohmann::json jsonFile;
     std::ifstream inFile (jsonFilePath);
@@ -18,6 +18,13 @@ bool CudaCompiler::hasFolderChanged (const std::string& folderPath, const std::s
     }
 
     bool changed = false;
+
+    // Check if build mode has changed
+    if (jsonFile.find ("buildMode") == jsonFile.end() || jsonFile["buildMode"] != buildMode)
+    {
+        changed = true;
+        jsonFile["buildMode"] = buildMode;
+    }
 
     for (const auto& entry : std::filesystem::directory_iterator (folderPath))
     {
@@ -52,6 +59,11 @@ void CudaCompiler::compile (const std::filesystem::path& resourceFolder, const s
 {
     ScopedStopWatch sw (_FN_);
 
+    std::string buildMode = "Release";
+#ifndef NDEBUG
+    buildMode = "Debug";
+#endif
+
     verifyPath (resourceFolder);
 
     std::filesystem::path outputFolder = resourceFolder / "ptx";
@@ -65,9 +77,9 @@ void CudaCompiler::compile (const std::filesystem::path& resourceFolder, const s
     std::filesystem::path cudaFolder = repoFolder / "sandbox" / "IBL" / "source" / "renderer" / "cuda";
     verifyPath (cudaFolder);
 
-    // nothing to do if the cu files haven't been changed
+    // nothing to do if the cu files or build mode haven't been changed
     std::string jsonPath = outputFolder.string() + "/file_times.json";
-    if (!hasFolderChanged (cudaFolder.string(), jsonPath)) return;
+    if (!hasFolderChanged (cudaFolder.string(), jsonPath, buildMode)) return;
 
     std::filesystem::path thirdPartyFolder = repoFolder / "thirdparty";
     verifyPath (thirdPartyFolder);
@@ -118,11 +130,11 @@ void CudaCompiler::compile (const std::filesystem::path& resourceFolder, const s
         args.push_back ("64");
         args.push_back ("--gpu-architecture");
         args.push_back ("sm_86"); // work for me, YMMV
-#ifndef NDEBUG
-        // FIXME waiting for crash in Debug mode to be fixed
-        args.push_back ("--debug");
-        args.push_back ("--device-debug");
-#endif
+        if (buildMode == "Debug")
+        {
+            args.push_back ("--debug");
+            args.push_back ("--device-debug");
+        }
 
         // NB if the ptx files are not being saved, first thing to do is check to make sure
         // this path is correct. It will be wrong if you have updated to a new version of vs2022
