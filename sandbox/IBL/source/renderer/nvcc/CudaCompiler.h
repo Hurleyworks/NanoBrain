@@ -12,7 +12,7 @@ class CudaCompiler
     void compile (const std::filesystem::path& resourceFolder, const std::filesystem::path& repoFolder);
    
  private:
-    
     void verifyPath (const std::filesystem::path& path);
+    bool hasFolderChanged (const std::string& folderPath, const std::string& jsonFilePath);
 
 }; // end class CudaCompiler

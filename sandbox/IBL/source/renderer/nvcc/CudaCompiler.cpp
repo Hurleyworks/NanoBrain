@@ -2,6 +2,52 @@
 #include "CudaCompiler.h"
 #include <reproc++/run.hpp>
 
+bool CudaCompiler::hasFolderChanged (const std::string& folderPath, const std::string& jsonFilePath)
+{
+    nlohmann::json jsonFile;
+    std::ifstream inFile (jsonFilePath);
+
+    if (inFile.is_open())
+    {
+        inFile >> jsonFile;
+        inFile.close();
+    }
+    else
+    {
+        jsonFile = nlohmann::json::object();
+    }
+
+    bool changed = false;
+
+    for (const auto& entry : std::filesystem::directory_iterator (folderPath))
+    {
+        auto path = entry.path();
+
+        // Only consider *.cu files
+        if (path.extension() == ".cu")
+        {
+            auto pathStr = path.string();
+            auto lastWriteTime = std::filesystem::last_write_time (path);
+            auto timeStr = lastWriteTime.time_since_epoch().count();
+
+            if (jsonFile.find (pathStr) == jsonFile.end() || jsonFile[pathStr] != timeStr)
+            {
+                changed = true;
+                jsonFile[pathStr] = timeStr;
+            }
+        }
+    }
+
+    std::ofstream outFile (jsonFilePath);
+    if (outFile.is_open())
+    {
+        outFile << jsonFile.dump (4);
+        outFile.close();
+    }
+
+    return changed;
+}
+
 void CudaCompiler::compile (const std::filesystem::path& resourceFolder, const std::filesystem::path& repoFolder)
 {
     ScopedStopWatch sw (_FN_);
@@ -18,7 +64,11 @@ void CudaCompiler::compile (const std::filesystem::path& resourceFolder, const s
 
     std::filesystem::path cudaFolder = repoFolder / "sandbox" / "IBL" / "source" / "renderer" / "cuda";
     verifyPath (cudaFolder);
-    
+
+    // nothing to do if the cu files haven't been changed
+    std::string jsonPath = outputFolder.string() + "/file_times.json";
+    if (!hasFolderChanged (cudaFolder.string(), jsonPath)) return;
+
     std::filesystem::path thirdPartyFolder = repoFolder / "thirdparty";
     verifyPath (thirdPartyFolder);
 
@@ -33,7 +83,7 @@ void CudaCompiler::compile (const std::filesystem::path& resourceFolder, const s
 
     std::string ext = ".cu";
     std::vector<std::filesystem::path> cuFiles = FileServices::findFilesWithExtension (cudaFolder, ext);
-  
+
     for (const auto& f : cuFiles)
     {
         std::string fileName = f.filename().string();
@@ -94,7 +144,7 @@ void CudaCompiler::compile (const std::filesystem::path& resourceFolder, const s
         args.push_back ("--output-file");
 
         std::string outPath = ptx ? (outputFolder / f.stem()).string() + ".ptx" : (outputFolder / f.stem()).string() + ".optixir";
-     
+
         LOG (DBUG) << outPath;
         args.push_back (outPath);
 
