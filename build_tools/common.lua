@@ -49,6 +49,7 @@ local ROOT = "../"
 		THIRD_PARTY_DIR .. "newtondynamics/**",
 		THIRD_PARTY_DIR .. "date/include/date",
 		THIRD_PARTY_DIR .. "reproc++",
+		THIRD_PARTY_DIR .. "cgltfReader",
 	}
 	
 	targetdir (ROOT .. "builds/bin/" .. outputdir .. "/%{prj.name}")
@@ -90,6 +91,7 @@ local ROOT = "../"
 			"newtondynamics",
 			"reproc++",
 			"Ws2_32",
+			"cgltfReader",
 			
 			--cuda
 			"cudart_static",
@@ -145,6 +147,7 @@ local ROOT = "../"
 			"newtondynamics",
 			"reproc++",
 			"Ws2_32",
+			"cgltfReader",
 			
 			--cuda
 			"cudart_static",
