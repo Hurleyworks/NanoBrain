@@ -7,3 +7,4 @@
 /benchmark/builds/VisualStudio2022
 /unittest/builds/VisualStudio2022
 /thirdparty/vcpkg
+/resources/IBL/ptx/file_times.json
