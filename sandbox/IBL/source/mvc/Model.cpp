@@ -122,7 +122,7 @@ void Model::processPath (const std::filesystem::path& p)
             // don't make static instances
             if (!node->isStaticBody())
             {
-                uint32_t instanceCount = 60;
+                uint32_t instanceCount = 6;
                 GeometryInstances instances (instanceCount);
                 renderer.addRenderableGeometryInstances (node, instances);
 

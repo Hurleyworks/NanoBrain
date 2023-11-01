@@ -58,7 +58,7 @@ class SceneHandler
         rebuildIAS();
     }
 
-    void updateMotion();
+    bool updateMotion();
 
     // Prepare Instance Acceleration Structure (IAS) for build
     void prepareForBuild();

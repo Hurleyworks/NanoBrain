@@ -215,6 +215,5 @@ void Renderer::removeRenderableNode (const std::string& name)
 
 void Renderer::updateMotion()
 {
-    ctx->handlers->scene->updateMotion();
-    restartRender = true;
+    restartRender = ctx->handlers->scene->updateMotion();
 }

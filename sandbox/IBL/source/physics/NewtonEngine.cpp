@@ -81,6 +81,7 @@ void NewtonEngine::resetEngine()
         OptiXNode node = n.lock();
 
         node->st.resetToStartPose();
+        node->desc.sleepState = 0;
 
         ndBodyDynamic* const ndBody = static_cast<ndBodyDynamic*> (node->getUserdata());
         if (!ndBody) continue;

@@ -129,9 +129,13 @@ void SceneHandler::removeNode (OptiXNode node)
     }
 }
 
-void SceneHandler::updateMotion()
+bool SceneHandler::updateMotion()
 {
-    if (!nodes.size()) return;
+    bool restartRender = false;
+    uint32_t bodyCount = nodes.size();
+
+    if (!bodyCount) return restartRender;
+    uint32_t bodiesSleeping = 0;
 
     for (auto& it : nodes)
     {
@@ -141,9 +145,18 @@ void SceneHandler::updateMotion()
         const Eigen::Matrix4f& m = node->st.worldTransform.matrix();
         MatrixRowMajor34f t = m.block<3, 4> (0, 0);
         node->instance.setTransform (t.data());
+
+        if (node->desc.sleepState)
+            ++bodiesSleeping;
     }
 
-    rebuildIAS();
+    if (bodiesSleeping < bodyCount)
+    {
+        rebuildIAS();
+        restartRender = true;
+    }
+
+    return restartRender;
 }
 
 // Prepare for building the IAS

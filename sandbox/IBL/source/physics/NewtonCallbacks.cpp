@@ -10,13 +10,11 @@ NewtonCallbacks::NewtonCallbacks (OptiXWeakNode weakNode) :
     ndBodyNotify (ndVector (ndFloat32 (0.0f), -10.0f, ndFloat32 (0.0f), ndFloat32 (0.0f))),
     weakNode (weakNode)
 {
-  
 }
 
 // dtor
 NewtonCallbacks::~NewtonCallbacks()
 {
-
 }
 
 void NewtonCallbacks::OnTransform (ndInt32 threadIndex, const ndMatrix& matrix)
@@ -48,5 +46,11 @@ void NewtonCallbacks::OnApplyExternalForce (ndInt32 threadIndex, ndFloat32 times
         ndVector force (GetGravity().Scale (massMatrix.m_w));
         body->SetForce (force);
         body->SetTorque (ndVector::m_zero);
+    }
+
+    ndBodyKinematic* const kinematic = body->GetAsBodyKinematic();
+    if (kinematic)
+    {
+        node->desc.sleepState = kinematic->GetSleepState();
     }
 }
