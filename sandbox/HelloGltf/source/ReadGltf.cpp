@@ -234,7 +234,8 @@ void ReadGltf::getTriangleIndices (MatrixXu& matrix, cgltf_accessor* accessor)
     size_t numTriangles = accessor->count / 3;
     matrix.resize (3, numTriangles);
 
-    cgltf_size stride = accessor->stride ? accessor->stride : cgltf_size (accessor->component_type) * 3;
+    // Corrected stride calculation
+    cgltf_size stride = accessor->stride ? accessor->stride : cgltf_size (accessor->component_type);
 
     uint8_t* buffer = (uint8_t*)accessor->buffer_view->buffer->data;
     uint8_t* offset_ptr = buffer + accessor->offset + accessor->buffer_view->offset;
@@ -243,7 +244,7 @@ void ReadGltf::getTriangleIndices (MatrixXu& matrix, cgltf_accessor* accessor)
     {
         for (size_t i = 0; i < numTriangles; ++i)
         {
-            uint16_t* idx = reinterpret_cast<uint16_t*> (offset_ptr + i * stride);
+            uint16_t* idx = reinterpret_cast<uint16_t*> (offset_ptr + i * 3 * stride);
             for (size_t j = 0; j < 3; ++j)
             {
                 matrix (j, i) = static_cast<unsigned int> (idx[j]);
@@ -254,7 +255,7 @@ void ReadGltf::getTriangleIndices (MatrixXu& matrix, cgltf_accessor* accessor)
     {
         for (size_t i = 0; i < numTriangles; ++i)
         {
-            uint32_t* idx = reinterpret_cast<uint32_t*> (offset_ptr + i * stride);
+            uint32_t* idx = reinterpret_cast<uint32_t*> (offset_ptr + i * 3 * stride);
             for (size_t j = 0; j < 3; ++j)
             {
                 matrix (j, i) = idx[j];
