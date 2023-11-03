@@ -2,9 +2,101 @@
 #include "OptiXGeometry.h"
 
 using Eigen::Vector2f;
+using sabi::MeshBuffers;
+using sabi::Surface;
 
 template <typename VertexType, typename TriangleType, typename GeometryData>
-void OptiXTriangleMesh<VertexType, TriangleType, GeometryData>::createGeometry (RenderContextPtr ctx, SpaceTime& st, const MaterialInfo& info)
+void OptiXTriangleMesh<VertexType, TriangleType, GeometryData>::createGltfGeometry (RenderContextPtr ctx, SpaceTime& st, const MaterialInfo& info)
+{
+    if (!std::filesystem::exists (filePath.generic_string()))
+        throw std::runtime_error ("Load failed because file does not exist: " + filePath.generic_string());
+
+    geomInst = ctx->scene.createGeometryInstance();
+
+    sabi::GltfReader reader;
+    reader.read (filePath);
+
+    std::vector<MeshBuffers>& meshes = reader.getMeshes();
+
+    for (auto& mesh : meshes)
+    {
+        // calc the model bounding box
+        st.modelBound.min() = mesh.V.rowwise().minCoeff();
+        st.modelBound.max() = mesh.V.rowwise().maxCoeff();
+
+        Surface surf = mesh.surfaces[0];
+        MatrixXu F = surf.F;
+        MatrixXf N;  // vertex normals
+        MatrixXf FN; // face normals
+        generate_normals (F, mesh.V, N, FN);
+        assert (mesh.V.cols() == N.cols());
+
+         std::string name = filePath.stem().string();
+        if (name.find ("static") != 0 && name.find ("STATIC") != 0) // Case-insensitive check for "static" prefix
+        {
+            // clamp the largest dimension to 1.0f
+            float scale = 1.0f;
+            normalizeSize (st.modelBound, scale);
+
+            scale *= 0.5f;
+
+            // center vertices on origin
+            centerVertices (mesh.V, st.modelBound, scale);
+        }
+
+        // create OptiX triangles
+        std::vector<TriangleType> triangles;
+        triangles.reserve (F.cols());
+        for (int i = 0; i < F.cols(); ++i)
+        {
+            Vector3u tri = F.col (i);
+           // LOG (DBUG) << tri.x() << ", " << tri.y() << ", " << tri.z();
+            triangles.emplace_back (TriangleType (tri.x(), tri.y(), tri.z()));
+        }
+
+        // create OptiX vertices
+        std::vector<VertexType> vertices;
+        vertices.reserve (mesh.V.cols());
+        for (int i = 0; i < mesh.V.cols(); ++i)
+        {
+            Vector3f v = mesh.V.col (i);
+            Vector3f n = N.col (i);
+            Vector2f uv = surf.uvs[i];
+
+            LOG (DBUG) << uv.x() << ", " << uv.y();
+            VertexType vertex;
+            vertex.position = Point3D (v.x(), v.y(), v.z());
+            vertex.normal = Normal3D (n.x(), n.y(), n.z());
+            vertex.texCoord = Point2D (uv.x(), uv.y());
+           
+
+            vertices.push_back (vertex);
+        }
+
+        // initialize gpu buffers
+        triangleBuffer.initialize (ctx->cuCtx, cudau::BufferType::Device, triangles);
+        vertexBuffer.initialize (ctx->cuCtx, cudau::BufferType::Device, vertices);
+
+        GeometryData geomData = {};
+        geomData.vertexBuffer = vertexBuffer.getDevicePointer();
+        geomData.triangleBuffer = triangleBuffer.getDevicePointer();
+
+        geomInst.setVertexBuffer (vertexBuffer);
+        geomInst.setTriangleBuffer (triangleBuffer);
+        geomInst.setNumMaterials (1, optixu::BufferView());
+
+        std::filesystem::path materialFolder (filePath.parent_path());
+        optixu::Material mat = ctx->handlers->mat->createMaterial<Shared::MaterialData> (info, surf.material, materialFolder);
+        geomInst.setMaterial (0, 0, mat);
+
+        geomInst.setGeometryFlags (0, OPTIX_GEOMETRY_FLAG_NONE);
+        geomInst.setUserData (geomData);
+    }
+}
+
+
+template <typename VertexType, typename TriangleType, typename GeometryData>
+void OptiXTriangleMesh<VertexType, TriangleType, GeometryData>::createObjGeometry (RenderContextPtr ctx, SpaceTime& st, const MaterialInfo& info)
 {
     if (!std::filesystem::exists (filePath.generic_string()))
         throw std::runtime_error ("Load failed because file does not exist: " + filePath.generic_string());
@@ -188,6 +280,7 @@ void OptiXTriangleMesh<VertexType, TriangleType, GeometryData>::createGeometry (
     geomInst.setGeometryFlags (0, OPTIX_GEOMETRY_FLAG_NONE);
     geomInst.setUserData (geomData);
 }
+
 
 template <typename VertexType, typename TriangleType, typename GeometryData>
 void OptiXTriangleMesh<VertexType, TriangleType, GeometryData>::extractVertexPositions (MatrixXf& V)

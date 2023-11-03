@@ -35,7 +35,7 @@ void View::initialize()
     toolContainer->set_layout (new GridLayout{Orientation::Horizontal, 6, Alignment::Fill, 0, 10});
 
     toolContainer->set_position (Vector2i (100, m_size.y() - DEFAULT_GUI_FOOTER_HEIGHT));
-
+   
     createPlaybackPanel();
 }
 

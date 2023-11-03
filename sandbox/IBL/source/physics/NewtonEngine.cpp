@@ -28,9 +28,10 @@ bool NewtonEngine::update (PhysicsEngineState state)
     }
     else if (state == PhysicsEngineState (PhysicsEngineState::Reset))
     {
+        LOG (DBUG) << "Reset Newton";
         resetEngine();
     }
-
+    
     return false;
 }
 

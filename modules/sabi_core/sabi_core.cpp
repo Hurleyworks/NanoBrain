@@ -5,7 +5,10 @@
 namespace sabi
 {
 
-	// camera
-	#include "excludeFromBuild/camera/CameraBody.cpp"
+// camera
+#include "excludeFromBuild/camera/CameraBody.cpp"
 
-} // namespace wabi
+// mesh
+#include "excludeFromBuild/loaders/GltfReader.cpp"
+
+} // namespace sabi

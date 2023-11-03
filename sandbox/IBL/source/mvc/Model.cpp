@@ -1,19 +1,5 @@
-
 #include "Model.h"
 #include "mace_core/mace_core.h"
-
-bool hasObjExtension (const std::filesystem::path& filePath)
-{
-    return filePath.extension() == ".obj";
-}
-
-bool isStaticBody (const std::filesystem::path& filePath)
-{
-    std::string filename = filePath.stem().string();
-
-    // Check if filename starts with "static"
-    return filename.rfind ("static", 0) == 0;
-}
 
 void Model::init (CameraHandle& camera, const std::string& resourceFolder, const std::string& repoFolder, const std::string& commonFolder)
 {
@@ -34,13 +20,13 @@ void Model::init (CameraHandle& camera, const std::string& resourceFolder, const
         std::filesystem::path ground (commonFolder + "/static_textured_ground.obj");
         processPath (ground);
 
-        // add bowl 
-        std::filesystem::path bowl (commonFolder + "/static_bowl.obj");
-        processPath (bowl);
+        // add bowl
+        //  std::filesystem::path bowl (commonFolder + "/static_bowl.obj");
+        //  processPath (bowl);
 
         // add a ball
-        std::filesystem::path ball (commonFolder + "/ball.obj");
-        processPath (ball);
+        std::filesystem::path box (commonFolder + "/BoxTextured/BoxTextured.gltf");
+        processPath (box);
     }
     catch (std::exception& e)
     {
@@ -87,7 +73,7 @@ void Model::processPath (const std::filesystem::path& p)
     }
     else
     {
-        if (hasObjExtension (p))
+        if (hasGltfExtension (p) || hasObjExtension(p))
         {
             OptiXGeometryRef g = OptiXTriangleMesh<shared::Vertex, shared::Triangle, Shared::GeometryData>::create();
             g->fromFile (p);
@@ -108,9 +94,6 @@ void Model::processPath (const std::filesystem::path& p)
                 node->st.worldTransform.translation() = Eigen::Vector3f (0.0, -1.0f, 0.0f);
                 node->st.makeCurrentPoseStartPose();
             }
-            else
-            {
-            }
 
             // add the node to the renderer
             renderer.addRenderableNode (node, p);
@@ -118,8 +101,8 @@ void Model::processPath (const std::filesystem::path& p)
             // add a weak node to the physics engine
             newton.addBody (node, engineState);
 
-            // add a stack of geomety instances to renderer
-            // don't make static instances
+            //  add a stack of geomety instances to renderer
+            //  don't make static instances
             if (!node->isStaticBody())
             {
                 uint32_t instanceCount = 60;

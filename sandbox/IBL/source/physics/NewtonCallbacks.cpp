@@ -30,6 +30,19 @@ void NewtonCallbacks::OnTransform (ndInt32 threadIndex, const ndMatrix& matrix)
     Quaternionf q (r.m_w, r.m_x, r.m_y, r.m_z);
     node->st.worldTransform.translation() = Vector3f (t.m_posit.m_x, t.m_posit.m_y, t.m_posit.m_z);
     node->st.worldTransform.linear() = Matrix3f (q);
+
+    ndBodyKinematic* const kinematic = body->GetAsBodyKinematic();
+    if (kinematic)
+    {
+        // FIXME make this real
+        float cutOff = -20.0f;
+        if (node->st.worldTransform.translation().y() < cutOff)
+        {
+            // put them to sleep if they're out of sight
+            kinematic->SetSleepState (1);
+        }
+        node->desc.sleepState = kinematic->GetSleepState();
+    }
 }
 
 void NewtonCallbacks::OnApplyExternalForce (ndInt32 threadIndex, ndFloat32 timestep)

@@ -15,8 +15,6 @@ TextureHandler::~TextureHandler()
 
 CUtexObject TextureHandler::createCudaTextureFromImage (const std::filesystem::path& fullPath)
 {
-    array.finalize();
-
     OIIO::ImageBuf image = imageCache->getCachedImage (fullPath.generic_string(), false);
 
     OIIO::ImageSpec spec = image.spec();
@@ -37,10 +35,11 @@ CUtexObject TextureHandler::createCudaTextureFromImage (const std::filesystem::p
 
     const uint8_t* const linearImageData = static_cast<uint8_t*> (rgba.localpixels());
 
-    array.initialize2D (ctx->cuCtx, cudau::ArrayElementType::UInt8, 4,
-                        cudau::ArraySurface::Disable, cudau::ArrayTextureGather::Disable,
-                        spec.width, spec.height, 1);
-    array.write<uint8_t> (linearImageData, spec.width * spec.height * 4);
+    std::shared_ptr<cudau::Array> array = std::make_shared<cudau::Array>();
+    array->initialize2D (ctx->cuCtx, cudau::ArrayElementType::UInt8, 4,
+                         cudau::ArraySurface::Disable, cudau::ArrayTextureGather::Disable,
+                         spec.width, spec.height, 1);
+    array->write<uint8_t> (linearImageData, spec.width * spec.height * 4);
 
     cudau::TextureSampler texSampler;
     texSampler.setXyFilterMode (cudau::TextureFilterMode::Point);
@@ -48,5 +47,6 @@ CUtexObject TextureHandler::createCudaTextureFromImage (const std::filesystem::p
     texSampler.setIndexingMode (cudau::TextureIndexingMode::NormalizedCoordinates);
     texSampler.setReadMode (cudau::TextureReadMode::NormalizedFloat_sRGB);
 
-    return texSampler.createTextureObject (array);
+    textures.emplace_back (array);
+    return texSampler.createTextureObject (*array);
 }

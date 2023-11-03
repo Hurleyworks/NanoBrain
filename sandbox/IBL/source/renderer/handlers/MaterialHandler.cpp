@@ -55,6 +55,53 @@ optixu::Material MaterialHandler::createMaterial (const MaterialInfo& info, rapi
 }
 
 template <typename MaterialData>
+optixu::Material MaterialHandler::createMaterial (const MaterialInfo& info, const cgltf_material& material, const std::filesystem::path& materialFolder)
+{
+    // Retrieve pipeline using entry point type from the MaterialInfo struct.
+    auto pl = ctx->handlers->pl->getPipeline (info.entryPoint);
+
+    // Create a new Optix material.
+    optixu::Material mat = ctx->optCtx.createMaterial();
+
+    // Maybe set hit group for shading
+    if (info.shadingProg != ProgramType::Invalid && info.rayTypeSearch != INVALID_RAY_TYPE)
+        mat.setHitGroup (info.rayTypeSearch, pl->hitPrograms[info.shadingProg]);
+
+    // Maybe set hit group for visibility
+    if (info.visibilityProg != ProgramType::Invalid && info.rayTypeVisibility != INVALID_RAY_TYPE)
+        mat.setHitGroup (info.rayTypeVisibility, pl->hitPrograms[info.visibilityProg]);
+
+    const cgltf_pbr_metallic_roughness& pbr = material.pbr_metallic_roughness;
+
+    MaterialData data = {};
+    if (material.has_pbr_metallic_roughness && pbr.base_color_texture.texture)
+    {
+        
+        std::string textureName = pbr.base_color_texture.texture->image->uri;
+        
+        std::filesystem::path imagePath (textureName);
+        if (imagePath.is_absolute())
+        {
+            data.texture = ctx->handlers->texture->createCudaTextureFromImage (imagePath);
+        }
+        else
+        {
+            
+            std::filesystem::path p (textureName);
+
+            auto fullPath = FileServices::findFileInFolder (materialFolder, p.filename().string());
+            if (fullPath)
+                data.texture = ctx->handlers->texture->createCudaTextureFromImage (fullPath.value());
+        }
+    }
+    data.albedo = RGB (sRGB_degamma_s (1.0f), sRGB_degamma_s (0.5f), sRGB_degamma_s (0.0f));
+
+    // Set user data on the Optix material.
+    mat.setUserData (data);
+    return mat;
+}
+
+template <typename MaterialData>
 optixu::Material MaterialHandler::createDefaultMaterial (const MaterialInfo& info)
 {
     // Retrieve pipeline using entry point type from the MaterialInfo struct.
@@ -81,4 +128,5 @@ optixu::Material MaterialHandler::createDefaultMaterial (const MaterialInfo& inf
 }
 
 template optixu::Material MaterialHandler::createMaterial<Shared::MaterialData> (const MaterialInfo&, rapidobj::Material&, const std::filesystem::path&);
+template optixu::Material MaterialHandler::createMaterial<Shared::MaterialData> (const MaterialInfo&, const cgltf_material& material, const std::filesystem::path&);
 template optixu::Material MaterialHandler::createDefaultMaterial<Shared::MaterialData> (const MaterialInfo&);

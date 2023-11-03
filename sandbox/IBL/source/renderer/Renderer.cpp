@@ -170,7 +170,11 @@ void Renderer::addRenderableNode (OptiXNode node, const std::filesystem::path& p
     materialInfo.rayTypeVisibility = Shared::RayType_Visibility;
 
     node->g->fromFile (path);
-    node->g->createGeometry (ctx, node->st, materialInfo);
+    if(hasObjExtension(path))
+        node->g->createObjGeometry (ctx, node->st, materialInfo);
+    if (hasGltfExtension (path))
+        node->g->createGltfGeometry (ctx, node->st, materialInfo);
+
     node->g->createGAS (ctx, Shared::NumRayTypes);
 
     ctx->handlers->scene->createInstance (node, EntryPointType::pathtrace);

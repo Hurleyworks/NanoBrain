@@ -1,5 +1,4 @@
-﻿#pragma once
-
+﻿
 // taken from OptiX_Utility
 // https://github.com/shocker-0x15/OptiX_Utility/blob/master/LICENSE.md
 // and from Shocker GfxExp
@@ -192,6 +191,18 @@ CUDA_DEVICE_FUNCTION CUDA_INLINE void sampleEnviroLight (
     lightSample->emittance = emittance;
 }
 
+// Next Event Estimation (NEE) is a technique used in path tracing to improve
+// the convergence of the rendered image. Instead of randomly bouncing rays around the scene,
+// NEE takes a shortcut and directly samples a light source to check if it contributes to
+// the illumination of a point.
+
+// In a traditional path tracer, rays are shot from the camera and bounce around the scene
+// until they hit a light source. This can take many bounces and lead to a noisy image.
+
+// With NEE, when a ray hits a surface, the algorithm also sends a direct ray to a light source
+// to see if it's visible from that point. This helps to quickly account for direct illumination, 
+// making the image converge faster and reducing noise.
+   
 // This function is for performing Next Event Estimation (NEE) in path tracing.
 // It samples a light source, computes the direct lighting from that source,
 // and combines it with the BRDF and visibility information.The function also
@@ -350,7 +361,6 @@ struct HitPointParameter
         return ret;
     }
 };
-;
 
 // This struct is used to fetch geometry and material data from
 // the Shader Binding Table (SBT) in OptiX.

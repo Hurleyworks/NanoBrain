@@ -1,6 +1,8 @@
-#include "ReadGltf.h"
+#include "GltfReader.h"
+using Eigen::Vector3f;
+using sabi::Surface;
 
-void ReadGltf::read (const std::filesystem::path& filePath)
+void GltfReader::read (const std::filesystem::path& filePath)
 {
     cgltf_options options = {};
     cgltf_data* data = nullptr;
@@ -15,7 +17,6 @@ void ReadGltf::read (const std::filesystem::path& filePath)
             cgltf_free (data);
             return;
         }
-
         // Loop through each mesh
         for (cgltf_size i = 0; i < data->meshes_count; ++i)
         {
@@ -57,6 +58,12 @@ void ReadGltf::read (const std::filesystem::path& filePath)
                 {
                     buffers.V.resize (3, vertexAccessor->count);
                     getVertexAttributes (buffers.V, vertexAccessor);
+
+                    for (int i = 0; i < buffers.V.cols(); ++i)
+                    {
+                        Vector3f p = buffers.V.col (i);
+                        // LOG (DBUG) << p.x() << ", " << p.y() << ", " << p.z();
+                    }
                 }
 
                 if (normalAccessor)
@@ -106,7 +113,7 @@ void ReadGltf::read (const std::filesystem::path& filePath)
     }
 }
 
-void ReadGltf::debugMaterial (const cgltf_material* material)
+void GltfReader::debugMaterial (const cgltf_material* material)
 {
     if (material == nullptr)
     {
@@ -136,7 +143,7 @@ void ReadGltf::debugMaterial (const cgltf_material* material)
     // Add more fields as needed
 }
 
-void ReadGltf::debug()
+void GltfReader::debug()
 {
     for (size_t m = 0; m < meshBuffers.size(); ++m)
     {
@@ -179,28 +186,10 @@ void ReadGltf::debug()
     }
 }
 
-void ReadGltf::getUVs (std::vector<Vector2f>& vec, cgltf_accessor* accessor)
+void GltfReader::getUVs (std::vector<Vector2f>& vec, cgltf_accessor* accessor)
 {
-    if (accessor == nullptr)
-    {
-        LOG (DBUG) << "Invalid accessor.";
-        return;
-    }
-
-    if (accessor->buffer_view == nullptr || accessor->buffer_view->buffer == nullptr)
-    {
-        LOG (DBUG) << "Invalid buffer or buffer view.";
-        return;
-    }
-
-    if (accessor->type != cgltf_type_vec2 || accessor->component_type != cgltf_component_type_r_32f)
-    {
-        LOG (DBUG) << "Accessor is not of expected type for UV coordinates.";
-        return;
-    }
-
-    // Allocate temporary storage for the UV data
-    std::vector<float> temp (accessor->count * 2); // 2 floats per UV coordinate
+    size_t numUVs = accessor->count;
+    std::vector<float> temp (numUVs * 2);
     cgltf_size num_floats = cgltf_accessor_unpack_floats (accessor, &temp[0], temp.size());
 
     if (num_floats != temp.size())
@@ -209,15 +198,15 @@ void ReadGltf::getUVs (std::vector<Vector2f>& vec, cgltf_accessor* accessor)
         return;
     }
 
-    // Fill the std::vector<Eigen::Vector2f> with unpacked UV data
-    vec.resize (accessor->count);
-    for (size_t i = 0; i < accessor->count; ++i)
+    vec.resize (numUVs);
+    for (size_t i = 0; i < numUVs; ++i)
     {
-        vec[i] = Vector2f (temp[i * 2], temp[i * 2 + 1]);
+        float u = (float)temp[i * 2];
+        float v = (float)temp[i * 2 + 1];
+        vec[i] = Vector2f (u, v);
     }
 }
-
-void ReadGltf::getTriangleIndices (MatrixXu& matrix, cgltf_accessor* accessor)
+void GltfReader::getTriangleIndices (MatrixXu& matrix, cgltf_accessor* accessor)
 {
     if (accessor == nullptr)
     {
@@ -230,7 +219,6 @@ void ReadGltf::getTriangleIndices (MatrixXu& matrix, cgltf_accessor* accessor)
         LOG (DBUG) << "Invalid buffer or buffer view.";
         return;
     }
-
 
     size_t numTriangles = accessor->count / 3;
     matrix.resize (3, numTriangles);
@@ -269,59 +257,7 @@ void ReadGltf::getTriangleIndices (MatrixXu& matrix, cgltf_accessor* accessor)
     }
 }
 
-#if 0
-void ReadGltf::getTriangleIndices (MatrixXu& matrix, cgltf_accessor* accessor)
-{
-    if (accessor == nullptr)
-    {
-        LOG (DBUG) << "Invalid accessor.";
-        return;
-    }
-
-    if (accessor->buffer_view == nullptr || accessor->buffer_view->buffer == nullptr)
-    {
-        LOG (DBUG) << "Invalid buffer or buffer view.";
-        return;
-    }
-
-    size_t numTriangles = accessor->count / 3;
-    matrix.resize (3, numTriangles);
-
-    cgltf_size stride = accessor->stride ? accessor->stride : cgltf_size (accessor->component_type) * 3;
-
-    uint8_t* buffer = (uint8_t*)accessor->buffer_view->buffer->data;
-    uint8_t* offset_ptr = buffer + accessor->offset + accessor->buffer_view->offset;
-
-    if (accessor->component_type == cgltf_component_type_r_16u)
-    {
-        for (size_t i = 0; i < numTriangles; ++i)
-        {
-            uint16_t* idx = reinterpret_cast<uint16_t*> (offset_ptr + i * stride);
-            for (size_t j = 0; j < 3; ++j)
-            {
-                matrix (j, i) = static_cast<unsigned int> (idx[j]);
-            }
-        }
-    }
-    else if (accessor->component_type == cgltf_component_type_r_32u)
-    {
-        for (size_t i = 0; i < numTriangles; ++i)
-        {
-            uint32_t* idx = reinterpret_cast<uint32_t*> (offset_ptr + i * stride);
-            for (size_t j = 0; j < 3; ++j)
-            {
-                matrix (j, i) = idx[j];
-            }
-        }
-    }
-    else
-    {
-        LOG (DBUG) << "Unsupported index component type.";
-    }
-}
-#endif
-
-void ReadGltf::getVertexAttributes (Eigen::MatrixXf& matrix, const cgltf_accessor* accessor)
+void GltfReader::getVertexAttributes (Eigen::MatrixXf& matrix, const cgltf_accessor* accessor)
 {
     if (accessor == nullptr)
     {
