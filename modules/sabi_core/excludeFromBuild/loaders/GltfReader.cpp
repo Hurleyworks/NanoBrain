@@ -1,4 +1,5 @@
 #include "GltfReader.h"
+
 using Eigen::Vector3f;
 using sabi::Surface;
 
@@ -21,7 +22,7 @@ void GltfReader::read (const std::filesystem::path& filePath)
         for (cgltf_size i = 0; i < data->meshes_count; ++i)
         {
             cgltf_mesh& cgltfMesh = data->meshes[i];
-            MeshBuffers buffers;
+            MeshBuffers mesh;
 
             // Loop through each primitive in the mesh
             for (cgltf_size j = 0; j < cgltfMesh.primitives_count; ++j)
@@ -51,25 +52,42 @@ void GltfReader::read (const std::filesystem::path& filePath)
                     {
                         uvAccessor = attribute.data;
                     }
+
+                    // Search for the node referencing the current mesh
+                    Eigen::Affine3f transform = Eigen::Affine3f::Identity();
+                    for (cgltf_size k = 0; k < data->nodes_count; ++k)
+                    {
+                        if (data->nodes[k].mesh == &cgltfMesh)
+                        {
+                            cgltf_node* node = &data->nodes[k];
+                            while (node)
+                            {
+                                Eigen::Affine3f localTransform = Eigen::Affine3f::Identity();
+                                localTransform.translate (Eigen::Vector3f (node->translation[0], node->translation[1], node->translation[2]));
+                                localTransform.rotate (Eigen::Quaternionf (node->rotation[3], node->rotation[0], node->rotation[1], node->rotation[2]));
+                                localTransform.scale (Eigen::Vector3f (node->scale[0], node->scale[1], node->scale[2]));
+
+                                transform = localTransform * transform;
+                                node = node->parent;
+                            }
+                            break; // Exit the loop once the node is found
+                        }
+                    }
+
+                    mesh.transform = transform;
                 }
 
                 // Fill in vertex and normal data
                 if (vertexAccessor)
                 {
-                    buffers.V.resize (3, vertexAccessor->count);
-                    getVertexAttributes (buffers.V, vertexAccessor);
-
-                    for (int i = 0; i < buffers.V.cols(); ++i)
-                    {
-                        Vector3f p = buffers.V.col (i);
-                        // LOG (DBUG) << p.x() << ", " << p.y() << ", " << p.z();
-                    }
+                    mesh.V.resize (3, vertexAccessor->count);
+                    getVertexAttributes (mesh.V, vertexAccessor);
                 }
 
                 if (normalAccessor)
                 {
-                    buffers.N.resize (3, normalAccessor->count);
-                    getVertexAttributes (buffers.N, normalAccessor);
+                    mesh.N.resize (3, normalAccessor->count);
+                    getVertexAttributes (mesh.N, normalAccessor);
                 }
 
                 // Fill in index data
@@ -77,34 +95,60 @@ void GltfReader::read (const std::filesystem::path& filePath)
                 {
                     surface.F.resize (3, indexAccessor->count / 3); // Assuming triangles
                     getTriangleIndices (surface.F, indexAccessor);
-
-                    for (int i = 0; i < surface.F.cols(); ++i)
-                    {
-                        Vector3u tri = surface.F.col (i);
-                        // LOG (DBUG) << tri.x() << ", " << tri.y() << ", " << tri.z();
-                    }
                 }
+
                 // Fill in uv data
                 if (uvAccessor)
                 {
                     surface.uvs.resize (uvAccessor->count);
                     getUVs (surface.uvs, uvAccessor);
-
-                    for (auto& uv : surface.uvs)
-                    {
-                        // LOG (DBUG) << uv.x() << ", " << uv.y();
-                    }
                 }
 
                 // Fill in material data
                 surface.material = *primitive.material;
 
                 // Add the surface to the list of surfaces for this mesh
-                buffers.surfaces.push_back (surface);
+                mesh.surfaces.push_back (surface);
             }
 
-            // Add to the list of all mesh buffers
-            meshBuffers.push_back (buffers);
+            // Search for the node referencing the current mesh
+            Eigen::Affine3f transform = Eigen::Affine3f::Identity();
+            for (cgltf_size k = 0; k < data->nodes_count; ++k)
+            {
+                if (data->nodes[k].mesh == &cgltfMesh)
+                {
+                    cgltf_node* node = &data->nodes[k];
+                    while (node)
+                    {
+                        Eigen::Affine3f localTransform = Eigen::Affine3f::Identity();
+
+                        if (node->has_matrix)
+                        {
+                            localTransform.matrix() << node->matrix[0], node->matrix[1], node->matrix[2], node->matrix[3],
+                                node->matrix[4], node->matrix[5], node->matrix[6], node->matrix[7],
+                                node->matrix[8], node->matrix[9], node->matrix[10], node->matrix[11],
+                                node->matrix[12], node->matrix[13], node->matrix[14], node->matrix[15];
+                        }
+                        else
+                        {
+                            localTransform.translate (Eigen::Vector3f (node->translation[0], node->translation[1], node->translation[2]));
+                            localTransform.rotate (Eigen::Quaternionf (node->rotation[3], node->rotation[0], node->rotation[1], node->rotation[2]));
+                            localTransform.scale (Eigen::Vector3f (node->scale[0], node->scale[1], node->scale[2]));
+                        }
+
+                        transform = localTransform * transform;
+                        node = node->parent;
+                    }
+                    break; // Exit the loop once the node is found
+                }
+            }
+            //mace::matStr4f (transform, DBUG, "Mesh transform");
+
+            // Store the world transform for this mesh
+            mesh.transform = transform;
+
+            // Add to the list of all mesh mesh
+            meshBuffers.push_back (mesh);
         }
     }
     else
@@ -147,26 +191,26 @@ void GltfReader::debug()
 {
     for (size_t m = 0; m < meshBuffers.size(); ++m)
     {
-        const MeshBuffers& buffers = meshBuffers[m];
+        const MeshBuffers& mesh = meshBuffers[m];
 
         LOG (DBUG) << " --- MeshBuffers " << m;
 
         LOG (DBUG) << "  Vertices:";
-        for (int i = 0; i < buffers.V.cols(); ++i)
+        for (int i = 0; i < mesh.V.cols(); ++i)
         {
-            LOG (DBUG) << "Vertex " << i << ": (" << buffers.V (0, i) << ", " << buffers.V (1, i) << ", " << buffers.V (2, i) << ")";
+            LOG (DBUG) << "Vertex " << i << ": (" << mesh.V (0, i) << ", " << mesh.V (1, i) << ", " << mesh.V (2, i) << ")";
         }
 
         LOG (DBUG) << "  Normals:";
-        for (int i = 0; i < buffers.N.cols(); ++i)
+        for (int i = 0; i < mesh.N.cols(); ++i)
         {
-            LOG (DBUG) << "Normal " << i << ": (" << buffers.N (0, i) << ", " << buffers.N (1, i) << ", " << buffers.N (2, i) << ")";
+            LOG (DBUG) << "Normal " << i << ": (" << mesh.N (0, i) << ", " << mesh.N (1, i) << ", " << mesh.N (2, i) << ")";
         }
 
         LOG (DBUG) << "  Surfaces:";
-        for (size_t s = 0; s < buffers.surfaces.size(); ++s)
+        for (size_t s = 0; s < mesh.surfaces.size(); ++s)
         {
-            const Surface& surface = buffers.surfaces[s];
+            const Surface& surface = mesh.surfaces[s];
 
             LOG (DBUG) << "  Surface " << s;
             debugMaterial (&surface.material);

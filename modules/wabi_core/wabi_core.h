@@ -45,12 +45,24 @@ using VectorXu = Eigen::Matrix<uint32_t, Eigen::Dynamic, 1>;
 using VectorXb = Eigen::Matrix<bool, Eigen::Dynamic, 1>;
 using MatrixXi = Eigen::Matrix<int32_t, Eigen::Dynamic, Eigen::Dynamic>;
 
+inline Eigen::Vector3f extractScaleFromAffine3f (const Eigen::Affine3f& t)
+{
+    // Extract the linear part of the transformation
+    const Eigen::Matrix3f& linearPart = t.linear();
+
+    // Compute the singular value decomposition
+    Eigen::JacobiSVD<Eigen::Matrix3f> svd (linearPart, Eigen::ComputeFullU | Eigen::ComputeFullV);
+
+    // The singular values correspond to the scaling factors
+    return svd.singularValues();
+}
+
 namespace wabi
 {
-	// math
-	#include "excludeFromBuild/math/Ray3.h"
-	#include "excludeFromBuild/math/Plane.h"
-	#include "excludeFromBuild/math/Maths.h"
-	#include "excludeFromBuild/math/MathUtil.h"
+// math
+#include "excludeFromBuild/math/Ray3.h"
+#include "excludeFromBuild/math/Plane.h"
+#include "excludeFromBuild/math/Maths.h"
+#include "excludeFromBuild/math/MathUtil.h"
 
 } // namespace wabi

@@ -63,7 +63,7 @@ void OptiXTriangleMesh<VertexType, TriangleType, GeometryData>::createGltfGeomet
             Vector3f n = N.col (i);
             Vector2f uv = surf.uvs[i];
 
-            LOG (DBUG) << uv.x() << ", " << uv.y();
+            //LOG (DBUG) << uv.x() << ", " << uv.y();
             VertexType vertex;
             vertex.position = Point3D (v.x(), v.y(), v.z());
             vertex.normal = Normal3D (n.x(), n.y(), n.z());

@@ -20,6 +20,7 @@ class Application : public Jahley::App
             reader.read (cube);
             reader.debug();
         }
+
         catch (std::exception& e)
         {
             std::cout << e.what() << std::endl;
