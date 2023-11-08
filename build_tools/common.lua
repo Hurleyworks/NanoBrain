@@ -50,6 +50,7 @@ local ROOT = "../"
 		THIRD_PARTY_DIR .. "date/include/date",
 		THIRD_PARTY_DIR .. "reproc++",
 		THIRD_PARTY_DIR .. "cgltfReader",
+		THIRD_PARTY_DIR .. "gltfsdk/inc/",
 	}
 	
 	targetdir (ROOT .. "builds/bin/" .. outputdir .. "/%{prj.name}")
@@ -92,6 +93,7 @@ local ROOT = "../"
 			"reproc++",
 			"Ws2_32",
 			"cgltfReader",
+			"gltfsdk",
 			
 			--cuda
 			"cudart_static",
@@ -148,6 +150,7 @@ local ROOT = "../"
 			"reproc++",
 			"Ws2_32",
 			"cgltfReader",
+			"gltfsdk",
 			
 			--cuda
 			"cudart_static",
