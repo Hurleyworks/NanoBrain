@@ -200,9 +200,9 @@ CUDA_DEVICE_FUNCTION CUDA_INLINE void sampleEnviroLight (
 // until they hit a light source. This can take many bounces and lead to a noisy image.
 
 // With NEE, when a ray hits a surface, the algorithm also sends a direct ray to a light source
-// to see if it's visible from that point. This helps to quickly account for direct illumination, 
+// to see if it's visible from that point. This helps to quickly account for direct illumination,
 // making the image converge faster and reducing noise.
-   
+
 // This function is for performing Next Event Estimation (NEE) in path tracing.
 // It samples a light source, computes the direct lighting from that source,
 // and combines it with the BRDF and visibility information.The function also
@@ -512,7 +512,7 @@ CUDA_DEVICE_KERNEL void RT_MS_NAME (miss)()
     float4 texValue = tex2DLod<float4> (plp.envLightTexture, texCoord.x, texCoord.y, 0.0f);
     RGB luminance = plp.envLightPowerCoeff * RGB (texValue.x, texValue.y, texValue.z);
     float misWeight = 1.0f;
-    if constexpr (true)
+    if (payload->pathLength > 1) // coming off a surface
     {
         float uvPDF = plp.envLightImportanceMap.evaluatePDF (texCoord.x, texCoord.y);
         float hypAreaPDensity = uvPDF / (2 * Pi * Pi * std::sin (theta));
@@ -523,10 +523,13 @@ CUDA_DEVICE_KERNEL void RT_MS_NAME (miss)()
             hypAreaPDensity;
         // FIXME
         // float bsdfPDensity = rwPayload->prevDirPDensity;
-        float bsdfPDensity = 1.0f; // just guessing
+        float bsdfPDensity = 0.25f; // just guessing
         misWeight = pow2 (bsdfPDensity) / (pow2 (bsdfPDensity) + pow2 (lightPDensity));
+
+        payload->contribution += payload->alpha * luminance * misWeight;
     }
-    payload->contribution += payload->alpha * luminance * misWeight;
+    else
+        payload->contribution = luminance;
 
     // Terminate the ray
     payload->terminate = true;
