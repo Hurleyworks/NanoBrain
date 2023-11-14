@@ -16,6 +16,64 @@ const std::string APP_NAME = "Cereal";
 using nlohmann::json;
 
 using sabi::CameraBody;
+using Eigen::Vector3f;
+
+namespace test
+{
+    class Light
+    {
+     public:
+        // Light properties
+        Vector3f pos = Vector3f::Ones();
+
+        template <class Archive>
+        void serialize (Archive& ar)
+        {
+            ar (CEREAL_NVP (pos));
+        }
+    };
+
+    class Camera
+    {
+     public:
+        // Camera properties
+        Vector3f pos = DEFAULT_CAMERA_POSIIION;
+
+        template <class Archive>
+        void serialize (Archive& ar)
+        {
+            ar (CEREAL_NVP (pos));
+        }
+    };
+
+    class Node
+    {
+     public:
+        // Node properties
+        Vector3f pos = Vector3f::Zero();
+
+        template <class Archive>
+        void serialize (Archive& ar)
+        {
+            ar (CEREAL_NVP (pos));
+        }
+    };
+
+    class Scene
+    {
+     public:
+        Camera camera;
+        std::vector<Light> lights;
+        std::vector<Node> nodes;
+
+        template <class Archive>
+        void serialize (Archive& ar)
+        {
+            ar (CEREAL_NVP (camera), CEREAL_NVP (lights), CEREAL_NVP (nodes));
+        }
+    };
+
+} // namespace test
 
 // Define a simple struct for testing
 struct MyStruct
@@ -123,6 +181,55 @@ TEST_CASE ("CameraBody Serialization and Deserialization")
     CHECK (loadedCamera.getApeture() == originalCamera.getApeture());
     CHECK (loadedCamera.getFocalLength() == originalCamera.getFocalLength());
     // Add more checks for other properties as needed
+}
+
+// Function to save CameraBody to a JSON file
+void saveSceneToFile (const test::Scene& scene, const std::string& filename)
+{
+    std::ofstream os ("scene.json");
+    cereal::JSONOutputArchive archive (os);
+    archive (cereal::make_nvp ("Scene", scene));
+}
+
+// Function to load CameraBody from a JSON file
+void loadSceneFromFile (test::Scene& scene, const std::string& filename)
+{
+    std::ifstream is (filename);
+    cereal::JSONInputArchive archive (is);
+    archive (scene);
+}
+
+TEST_CASE ("Scene Serialization and Deserialization")
+{
+    test::Scene originalScene;
+    originalScene.lights.push_back (test::Light());
+    originalScene.nodes.push_back (test::Node());
+    test::Node node;
+    node.pos.x() = 3;
+    originalScene.nodes.push_back (node);
+    
+    const std::string filename = "scene.json";
+
+    // Save to disk
+    saveSceneToFile (originalScene, filename);
+
+    // Load from disk
+    test::Scene loadedScene;
+    loadSceneFromFile (loadedScene, filename);
+
+    // Compare properties of originalCamera and loadedCamera
+    CHECK (loadedScene.camera.pos == originalScene.camera.pos);
+
+    for (int i = 0; i < loadedScene.lights.size(); ++i)
+    {
+        CHECK (loadedScene.lights[i].pos == originalScene.lights[i].pos);
+    }
+
+    for (int i = 0; i < loadedScene.nodes.size(); ++i)
+    {
+        CHECK (loadedScene.nodes[i].pos == originalScene.nodes[i].pos);
+    }
+   
 }
 
 class Application : public Jahley::App
