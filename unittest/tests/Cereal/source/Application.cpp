@@ -25,11 +25,12 @@ namespace test
      public:
         // Light properties
         Vector3f pos = Vector3f::Ones();
+        float intensity = 4.5f;
 
         template <class Archive>
         void serialize (Archive& ar)
         {
-            ar (CEREAL_NVP (pos));
+            ar (CEREAL_NVP (pos), CEREAL_NVP (intensity));
         }
     };
 
@@ -37,12 +38,13 @@ namespace test
     {
      public:
         // Camera properties
-        Vector3f pos = DEFAULT_CAMERA_POSIIION;
+        Vector3f eye = DEFAULT_CAMERA_POSIIION;
+        Vector3f target = DEFAULT_CAMERA_TARGET;
 
         template <class Archive>
         void serialize (Archive& ar)
         {
-            ar (CEREAL_NVP (pos));
+            ar (CEREAL_NVP (eye), CEREAL_NVP (target));
         }
     };
 
@@ -51,11 +53,12 @@ namespace test
      public:
         // Node properties
         Vector3f pos = Vector3f::Zero();
+        Vector3f scale = Vector3f::Ones();
 
         template <class Archive>
         void serialize (Archive& ar)
         {
-            ar (CEREAL_NVP (pos));
+            ar (CEREAL_NVP (pos), CEREAL_NVP (scale));
         }
     };
 
@@ -183,7 +186,7 @@ TEST_CASE ("CameraBody Serialization and Deserialization")
     // Add more checks for other properties as needed
 }
 
-// Function to save CameraBody to a JSON file
+// Function to save Scene to a JSON file
 void saveSceneToFile (const test::Scene& scene, const std::string& filename)
 {
     std::ofstream os ("scene.json");
@@ -191,7 +194,7 @@ void saveSceneToFile (const test::Scene& scene, const std::string& filename)
     archive (cereal::make_nvp ("Scene", scene));
 }
 
-// Function to load CameraBody from a JSON file
+// Function to load Scene from a JSON file
 void loadSceneFromFile (test::Scene& scene, const std::string& filename)
 {
     std::ifstream is (filename);
@@ -203,10 +206,13 @@ TEST_CASE ("Scene Serialization and Deserialization")
 {
     test::Scene originalScene;
     originalScene.lights.push_back (test::Light());
-    originalScene.nodes.push_back (test::Node());
+
     test::Node node;
-    node.pos.x() = 3;
+    node.pos.x() = 3.f;
+    node.pos.y() = 300.123f;
+    node.pos.z() = -15.5f;
     originalScene.nodes.push_back (node);
+    originalScene.nodes.push_back (test::Node());
     
     const std::string filename = "scene.json";
 
@@ -217,17 +223,20 @@ TEST_CASE ("Scene Serialization and Deserialization")
     test::Scene loadedScene;
     loadSceneFromFile (loadedScene, filename);
 
-    // Compare properties of originalCamera and loadedCamera
-    CHECK (loadedScene.camera.pos == originalScene.camera.pos);
+    // Compare properties of original and loaded
+    CHECK (loadedScene.camera.eye == originalScene.camera.eye);
+    CHECK (loadedScene.camera.target == originalScene.camera.target);
 
     for (int i = 0; i < loadedScene.lights.size(); ++i)
     {
         CHECK (loadedScene.lights[i].pos == originalScene.lights[i].pos);
+        CHECK (loadedScene.lights[i].intensity == originalScene.lights[i].intensity);
     }
 
     for (int i = 0; i < loadedScene.nodes.size(); ++i)
     {
         CHECK (loadedScene.nodes[i].pos == originalScene.nodes[i].pos);
+        CHECK (loadedScene.nodes[i].scale == originalScene.nodes[i].scale);
     }
    
 }
