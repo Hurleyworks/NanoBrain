@@ -27,6 +27,11 @@ SOFTWARE.
 #include <rapidobj/rapidobj.hpp>
 #include <cgltfReader/cgltf.h>
 
+// cereal
+#include <cereal/cereal.hpp>
+#include <cereal/types/vector.hpp>
+#include <cereal/types/string.hpp>
+
 constexpr float DEFAULT_ZOOM_FACTOR = 0.5f;
 constexpr float DEFAULT_ZOOM_MULTIPLIER = 200.0f;
 
@@ -38,6 +43,19 @@ constexpr float DEFAULT_NEAR_PLANE = 0.01f;
 constexpr float DEFAULT_FAR_PLANE = 1000.0f;
 constexpr float DEFAULT_FOCAL_LENGTH = 1.0f;
 constexpr float DEFAULT_APETURE = 0.0f;
+
+// must specialize for Eigen
+namespace cereal
+{
+    template <class Archive>
+    void serialize (Archive& ar, Eigen::Vector3f& vector)
+    {
+        ar (cereal::make_nvp ("x", vector.x()),
+            cereal::make_nvp ("y", vector.y()),
+            cereal::make_nvp ("z", vector.z()));
+    }
+}
+
 
 namespace sabi
 {

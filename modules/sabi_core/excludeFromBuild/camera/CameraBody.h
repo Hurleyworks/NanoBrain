@@ -29,7 +29,7 @@ SOFTWARE.
 
 using CameraHandle = std::shared_ptr<class CameraBody>;
 
-class CameraBody 
+class CameraBody
 {
     // https://www.scratchapixel.com/lessons/3d-basic-rendering/3d-viewing-pinhole-camera/how-pinhole-camera-works-part-2
     // It is very important to remember that two parameters determine the angle of view : the focal length and the film size.
@@ -44,7 +44,6 @@ class CameraBody
  public:
     CameraBody();
     ~CameraBody();
-
 
     float getFocalLength() const { return focalLength; }
     void setFocalLength (float length)
@@ -98,7 +97,7 @@ class CameraBody
     OIIO::ImageBuf& getSensorPixels() { return sensor.getImage(); }
     CameraSensor* getSensor() { return &sensor; }
 
-	void setPose (const Pose& pose) { this->pose = pose; }
+    void setPose (const Pose& pose) { this->pose = pose; }
     const Pose& getPose() const { return pose; }
     Pose& getPose() { return pose; }
 
@@ -109,7 +108,7 @@ class CameraBody
 
     const Eigen::Matrix4f& getViewMatrix() const
     {
-        if (!viewMatrixCached) 
+        if (!viewMatrixCached)
             calcViewMatrix();
         return viewMatrix.matrix();
     }
@@ -133,6 +132,13 @@ class CameraBody
     const Eigen::Vector3f& getTarget() const { return target; }
     const Eigen::Vector3f& getViewDirection() const { return viewDirection; }
     const Eigen::Quaternionf& getOrientation() const { return orientation; }
+
+    // serialize with Cereal
+    template <class Archive>
+    void serialize (Archive& ar)
+    {
+        ar (CEREAL_NVP (focalLength), CEREAL_NVP (apeture), CEREAL_NVP (eye), CEREAL_NVP (target));
+    }
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 

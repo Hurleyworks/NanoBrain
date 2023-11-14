@@ -23,6 +23,8 @@ end
     
 	outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 	
+	--add tests here
 	include "tests/OIIO"
 	include "tests/ShockerEigen"
+	include "tests/Cereal"
 	
