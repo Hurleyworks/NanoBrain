@@ -139,7 +139,7 @@ void CudaCompiler::compile (const std::filesystem::path& resourceFolder, const s
         // NB if the ptx files are not being saved, first thing to do is check to make sure
         // this path is correct. It will be wrong if you have updated to a new version of vs2022
         args.push_back ("-ccbin");
-        args.push_back ("C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.37.32822/bin/Hostx64/x64/");
+        args.push_back ("C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.38.33130/bin/Hostx64/x64/");
 
         // OptiX 8 headers
         args.push_back ("--include-path");

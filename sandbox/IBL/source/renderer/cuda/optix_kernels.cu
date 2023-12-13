@@ -155,6 +155,11 @@ CUDA_DEVICE_FUNCTION CUDA_INLINE void sampleEnviroLight (
     // Convert UV to spherical coordinates
     float phi = 2 * Pi * u;
     float theta = Pi * v;
+    if (theta == 0.0f)
+    {
+        *areaPDensity = 0.0f;
+        return;
+    }
 
     // Apply rotation to the environment light
     float posPhi = phi - plp.envLightRotation;
@@ -471,6 +476,24 @@ CUDA_DEVICE_KERNEL void RT_RG_NAME (pathTracing)()
 
     float curWeight = 1.0f / (1 + plp.numAccumFrames);
     RGB colorResult = (1 - curWeight) * prevColorResult + curWeight * payload.contribution;
+#if 1
+    if (isnan (colorResult.r) || isnan (colorResult.g) || isnan (colorResult.b))
+    {
+        // Add this line to print the payload.contribution values
+        printf ("payload.contribution: %f, %f, %f\n", payload.contribution.r, payload.contribution.g, payload.contribution.b);
+        colorResult = RGB (make_float3 (1000000.0f, 0.0f, 0.0f)); // super red
+    }
+    else if (isinf (colorResult.r) || isinf (colorResult.g) || isinf (colorResult.b))
+    {
+        printf ("payload.contribution: %f, %f, %f\n", payload.contribution.r, payload.contribution.g, payload.contribution.b);
+        colorResult = RGB (make_float3 (0.0f, 1000000.0f, 0.0f)); // super green
+    }
+    else if (colorResult.r < 0.0f || colorResult.g < 0.0f || colorResult.b < 0.0f)
+    {
+        printf ("payload.contribution: %f, %f, %f\n", payload.contribution.r, payload.contribution.g, payload.contribution.b);
+        colorResult = RGB (make_float3 (0.0f, 0.0f, 1000000.0f)); // super blue
+    }
+#endif
     RGB albedoResult = (1 - curWeight) * prevAlbedoResult + curWeight * firstHitAlbedo;
     Normal3D normalResult = (1 - curWeight) * prevNormalResult + curWeight * firstHitNormal;
 

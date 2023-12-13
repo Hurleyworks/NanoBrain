@@ -3,7 +3,7 @@
 #include "mvc/Controller.h"
 #include "mvc/Model.h"
 
-const std::string APP_NAME = "ILB";
+const std::string APP_NAME = "IBL";
 
 using Eigen::Vector3f;
 using nanogui::Vector2i;

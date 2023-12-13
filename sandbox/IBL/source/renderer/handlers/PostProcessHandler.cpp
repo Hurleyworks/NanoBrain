@@ -38,8 +38,7 @@ void PostProcessHandler::initialize()
     else if (useKernelPredictionMode)
         denoiserModel = OPTIX_DENOISER_MODEL_KIND_AOV;
 
-    optixu::GuideAlbedo useAlbedo = optixu::GuideAlbedo::Yes;
-    optixu::GuideNormal useNormal = optixu::GuideNormal::Yes;
+   
     denoiser = ctx->optCtx.createDenoiser (
         denoiserModel, useAlbedo, useNormal, OPTIX_DENOISER_ALPHA_MODE_COPY);
 
@@ -163,7 +162,7 @@ void PostProcessHandler::denoise (bool newSequence)
     for (int i = 0; i < denoisingTasks.size(); ++i)
         denoiser.invoke (
             ctx->cuStr, denoisingTasks[i],
-            inputBuffers, optixu::IsFirstFrame::Yes,
+            inputBuffers, optixu::IsFirstFrame (newSequence),
             hdrNormalizer, 0.0f,
             linearDenoisedBeautyBuffer,
             nullptr, optixu::BufferView()); // no AOV outputs, no internal guide layer for the next frame

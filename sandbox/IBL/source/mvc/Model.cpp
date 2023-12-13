@@ -24,7 +24,7 @@ void Model::init (CameraHandle& camera, const std::string& resourceFolder, const
         //  std::filesystem::path bowl (commonFolder + "/static_bowl.obj");
         //  processPath (bowl);
 
-        // add a ball
+        // add a gltf box
         std::filesystem::path box (commonFolder + "/BoxTextured/BoxTextured.gltf");
         processPath (box);
     }
@@ -73,7 +73,7 @@ void Model::processPath (const std::filesystem::path& p)
     }
     else
     {
-        if (hasGltfExtension (p) || hasObjExtension(p))
+        if (hasGltfExtension (p) || hasObjExtension (p))
         {
             OptiXGeometryRef g = OptiXTriangleMesh<shared::Vertex, shared::Triangle, Shared::GeometryData>::create();
             g->fromFile (p);

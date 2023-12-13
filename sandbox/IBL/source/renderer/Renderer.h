@@ -51,7 +51,7 @@ class Renderer
     CUdeviceptr plpOnDevice;              // Device pointer for pipeline launch parameters
     bool restartRender = true;            // Flag to restart render
     uint32_t numAccumFrames = 0;
-    float log10EnvLightPowerCoeff = 0.0f;
+    float log10EnvLightPowerCoeff = 0.25f;
     float envLightRotation = 0.0f;
 
     std::unique_ptr<float4[]> renderedPixels = nullptr;

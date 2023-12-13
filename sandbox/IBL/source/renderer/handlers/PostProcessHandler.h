@@ -60,8 +60,8 @@ class PostProcessHandler
     uint32_t tileHeight = 0;
     bool useKernelPredictionMode = false;
     bool performUpscale = false;
-    bool useAlbedo = true;
-    bool useNormal = true;
+    optixu::GuideAlbedo useAlbedo = optixu::GuideAlbedo::Yes;
+    optixu::GuideNormal useNormal = optixu::GuideNormal::Yes;
 
     optixu::Denoiser denoiser;
     cudau::Buffer denoiserStateBuffer;
